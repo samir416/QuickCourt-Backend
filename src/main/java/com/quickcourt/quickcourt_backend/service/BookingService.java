@@ -4,9 +4,11 @@ import com.quickcourt.quickcourt_backend.dto.BookingRequest;
 import com.quickcourt.quickcourt_backend.dto.BookingResponse;
 import com.quickcourt.quickcourt_backend.entity.Booking;
 import com.quickcourt.quickcourt_backend.entity.Court;
+import com.quickcourt.quickcourt_backend.entity.TimeSlot;
 import com.quickcourt.quickcourt_backend.entity.User;
 import com.quickcourt.quickcourt_backend.repository.BookingRepository;
 import com.quickcourt.quickcourt_backend.repository.CourtRepository;
+import com.quickcourt.quickcourt_backend.repository.TimeSlotRepository;
 import com.quickcourt.quickcourt_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final CourtRepository courtRepository;
+    private final TimeSlotRepository timeSlotRepository;
 
     public BookingResponse createBooking(BookingRequest request) {
         User user = userRepository.findById(request.getUserId())
@@ -50,7 +53,7 @@ public class BookingService {
             throw new RuntimeException("Booking date cannot be in the past");
         }
 
-        if (durationHours <= 0) {
+        if (durationHours == null || durationHours <= 0) {
             throw new RuntimeException("Duration must be greater than zero");
         }
 
@@ -58,6 +61,12 @@ public class BookingService {
 
         validateOperatingHours(court, startTime, endTime);
         validateBookingTime(bookingDate, startTime);
+        validateBlockedSlots(
+                court.getId(),
+                bookingDate,
+                startTime,
+                endTime
+        );
         validateAvailability(
                 court.getId(),
                 bookingDate,
@@ -191,7 +200,10 @@ public class BookingService {
 
         booking.setPaymentStatus(Booking.PaymentStatus.SUCCESS);
         booking.setPaymentReference(
-                "QC-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase()
+                "QC-" + UUID.randomUUID()
+                        .toString()
+                        .substring(0, 8)
+                        .toUpperCase()
         );
         booking.setStatus(Booking.BookingStatus.CONFIRMED);
 
@@ -226,9 +238,36 @@ public class BookingService {
 
         LocalDate today = LocalDate.now();
 
-        if (bookingDate.equals(today) &&
-                !startTime.isAfter(LocalTime.now())) {
+        if (bookingDate.equals(today)
+                && !startTime.isAfter(LocalTime.now())) {
             throw new RuntimeException("Booking time must be in the future");
+        }
+    }
+
+    private void validateBlockedSlots(
+            Long courtId,
+            LocalDate bookingDate,
+            LocalTime requestedStart,
+            LocalTime requestedEnd) {
+
+        List<TimeSlot> blockedSlots =
+                timeSlotRepository
+                        .findByCourtIdAndSlotDateAndStatusOrderByStartTimeAsc(
+                                courtId,
+                                bookingDate,
+                                TimeSlot.SlotStatus.BLOCKED
+                        );
+
+        boolean blocked = blockedSlots.stream()
+                .anyMatch(slot ->
+                        requestedStart.isBefore(slot.getEndTime())
+                                && requestedEnd.isAfter(slot.getStartTime())
+                );
+
+        if (blocked) {
+            throw new RuntimeException(
+                    "Selected time slot is blocked for maintenance"
+            );
         }
     }
 
@@ -243,14 +282,17 @@ public class BookingService {
 
         boolean conflict = bookings.stream()
                 .filter(booking ->
-                        booking.getStatus() != Booking.BookingStatus.CANCELLED)
+                        booking.getStatus()
+                                != Booking.BookingStatus.CANCELLED)
                 .anyMatch(booking ->
-                        requestedStart.isBefore(booking.getEndTime()) &&
-                        requestedEnd.isAfter(booking.getStartTime())
+                        requestedStart.isBefore(booking.getEndTime())
+                                && requestedEnd.isAfter(booking.getStartTime())
                 );
 
         if (conflict) {
-            throw new RuntimeException("Selected time slot is already booked");
+            throw new RuntimeException(
+                    "Selected time slot is already booked"
+            );
         }
     }
 

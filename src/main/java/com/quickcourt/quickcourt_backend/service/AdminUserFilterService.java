@@ -1,5 +1,6 @@
 package com.quickcourt.quickcourt_backend.service;
 
+import com.quickcourt.quickcourt_backend.dto.AdminUserResponse;
 import com.quickcourt.quickcourt_backend.entity.User;
 import com.quickcourt.quickcourt_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,7 @@ public class AdminUserFilterService {
 
     private final UserRepository userRepository;
 
-    public List<User> filterUsers(
+    public List<AdminUserResponse> filterUsers(
             String search,
             String role,
             String status) {
@@ -24,6 +25,7 @@ public class AdminUserFilterService {
                 .filter(user -> matchesSearch(user, search))
                 .filter(user -> matchesRole(user, role))
                 .filter(user -> matchesStatus(user, status))
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -71,5 +73,18 @@ public class AdminUserFilterService {
     private boolean contains(String value, String search) {
         return value != null
                 && value.toLowerCase().contains(search);
+    }
+
+    private AdminUserResponse toResponse(User user) {
+        return AdminUserResponse.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole() != null ? user.getRole().name() : null)
+                .emailVerified(user.getEmailVerified())
+                .active(user.getActive())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
     }
 }

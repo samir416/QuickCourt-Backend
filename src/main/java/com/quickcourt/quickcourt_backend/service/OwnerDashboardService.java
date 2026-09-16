@@ -1,6 +1,7 @@
 package com.quickcourt.quickcourt_backend.service;
 
 import com.quickcourt.quickcourt_backend.dto.OwnerDashboardResponse;
+import com.quickcourt.quickcourt_backend.dto.PeakBookingHoursResponse;
 import com.quickcourt.quickcourt_backend.entity.Booking;
 import com.quickcourt.quickcourt_backend.entity.Court;
 import com.quickcourt.quickcourt_backend.entity.User;
@@ -13,7 +14,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -94,5 +98,52 @@ public class OwnerDashboardService {
                 .totalVenues(totalVenues)
                 .totalEarnings(totalEarnings)
                 .build();
+    }
+
+    public List<PeakBookingHoursResponse> getPeakBookingHours(Long ownerId) {
+        User owner = userRepository.findById(ownerId)
+                .orElseThrow(() -> new RuntimeException("Owner not found"));
+
+        if (owner.getRole() != User.Role.FACILITY_OWNER) {
+            throw new RuntimeException("Facility owner access required");
+        }
+
+        List<Venue> venues = venueRepository.findByOwner(owner);
+
+        List<Long> venueIds = venues.stream()
+                .map(Venue::getId)
+                .toList();
+
+        List<Booking> bookings = venueIds.stream()
+                .flatMap(venueId ->
+                        bookingRepository
+                                .findByCourtVenueIdOrderByBookingDateDescStartTimeDesc(venueId)
+                                .stream())
+                .distinct()
+                .filter(booking ->
+                        booking.getStatus() != Booking.BookingStatus.CANCELLED)
+                .toList();
+
+        Map<Integer, Long> bookingCounts = bookings.stream()
+                .collect(Collectors.groupingBy(
+                        booking -> booking.getStartTime().getHour(),
+                        Collectors.counting()
+                ));
+
+        List<PeakBookingHoursResponse> response = new ArrayList<>();
+
+        for (int hour = 0; hour < 24; hour++) {
+            response.add(
+                    PeakBookingHoursResponse.builder()
+                            .hour(String.format("%02d:00", hour))
+                            .bookingCount(bookingCounts.getOrDefault(
+                                    hour,
+                                    0L
+                            ))
+                            .build()
+            );
+        }
+
+        return response;
     }
 }

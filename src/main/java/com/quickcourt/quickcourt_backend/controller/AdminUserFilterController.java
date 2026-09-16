@@ -1,6 +1,6 @@
 package com.quickcourt.quickcourt_backend.controller;
 
-import com.quickcourt.quickcourt_backend.entity.User;
+import com.quickcourt.quickcourt_backend.dto.AdminUserResponse;
 import com.quickcourt.quickcourt_backend.service.AdminUserFilterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,17 +17,14 @@ public class AdminUserFilterController {
     private final AdminUserFilterService adminUserFilterService;
 
     @GetMapping
-    public ResponseEntity<List<User>> filterUsers(
+    public ResponseEntity<List<AdminUserResponse>> filterUsers(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String role,
             @RequestParam(required = false) String status) {
 
-        return ResponseEntity.ok(
-                adminUserFilterService.filterUsers(
-                        search,
-                        role,
-                        status
-                )
-        );
+        List<AdminUserResponse> users =
+                adminUserFilterService.filterUsers(search, role, status);
+
+        return ResponseEntity.ok(users);
     }
 }
