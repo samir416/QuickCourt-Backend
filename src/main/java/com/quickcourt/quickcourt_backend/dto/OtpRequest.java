@@ -19,6 +19,5 @@ public class OtpRequest {
     @Email(message = "Invalid email format")
     private String email;
 
-    @NotBlank(message = "OTP is required")
     private String otp;
 }

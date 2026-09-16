@@ -7,6 +7,7 @@ import com.quickcourt.quickcourt_backend.repository.OtpVerificationRepository;
 import com.quickcourt.quickcourt_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.concurrent.ThreadLocalRandom;
@@ -18,6 +19,7 @@ public class OtpService {
     private final OtpVerificationRepository otpVerificationRepository;
     private final UserRepository userRepository;
 
+    @Transactional
     public OtpResponse generateOtp(String email) {
         String normalizedEmail = email.toLowerCase().trim();
 
@@ -31,7 +33,9 @@ public class OtpService {
                     .build();
         }
 
-        String otp = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 1000000));
+        String otp = String.valueOf(
+                ThreadLocalRandom.current().nextInt(100000, 1000000)
+        );
 
         otpVerificationRepository.deleteByEmail(normalizedEmail);
 
@@ -44,7 +48,9 @@ public class OtpService {
 
         otpVerificationRepository.save(verification);
 
-        System.out.println("QuickCourt OTP for " + normalizedEmail + ": " + otp);
+        System.out.println(
+                "QuickCourt OTP for " + normalizedEmail + ": " + otp
+        );
 
         return OtpResponse.builder()
                 .success(true)
@@ -52,6 +58,7 @@ public class OtpService {
                 .build();
     }
 
+    @Transactional
     public OtpResponse verifyOtp(String email, String otp) {
         String normalizedEmail = email.toLowerCase().trim();
 
