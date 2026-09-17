@@ -1,4 +1,4 @@
-import AccountSidebar from "../components/AccountSidebar";
+﻿import AccountSidebar from "../components/AccountSidebar";
 import { useState } from "react";
 import { apiFetch } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -43,14 +43,8 @@ export default function Profile() {
             Email
             <input value={email} onChange={e => setEmail(e.target.value)} disabled />
           </label>
-          <label className="field-label">
-            Old password
-            <input type="password" placeholder="Not supported yet" disabled />
-          </label>
-          <label className="field-label">
-            New password
-            <input type="password" placeholder="Not supported yet" disabled />
-          </label>
+          
+          
           
           {error && <small className="auth-error" style={{color: 'red'}}>{error}</small>}
           {message && <small className="auth-success" style={{color: 'green'}}>{message}</small>}
@@ -61,3 +55,4 @@ export default function Profile() {
     </main>
   );
 }
+

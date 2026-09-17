@@ -3334,3 +3334,12 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
     display: none; /* Chrome, Safari, Opera */
 }
 
+.auth-art-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 10%;
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+}

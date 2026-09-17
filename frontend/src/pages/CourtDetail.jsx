@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiFetch } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -9,6 +9,7 @@ export default function CourtDetail() {
   const [venue, setVenue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+    const [reviews, setReviews] = useState([]);
   const [rating, setRating] = useState(0);
 
   useEffect(() => {
@@ -16,6 +17,8 @@ export default function CourtDetail() {
       try {
         setLoading(true);
         const data = await apiFetch("/venues/" + venueId);
+          const reviewsData = await apiFetch("/venues/" + venueId + "/reviews").catch(() => []);
+          setReviews(Array.isArray(reviewsData) ? reviewsData : []);
         setVenue(data);
         setRating(data.rating || 4);
       } catch (err) {
@@ -41,13 +44,13 @@ export default function CourtDetail() {
         <nav className="site-nav">
           <Link to="/">Home</Link>
           <Link to="/booking" className="active">
-            âš¡ Book
+            Ã¢Å¡Â¡ Book
           </Link>
           {user ? (
-             <Link to="/profile" className="profile-link">ðŸ‘¤ {user.name}</Link>
+             <Link to="/profile" className="profile-link">Ã°Å¸â€˜Â¤ {user.name}</Link>
           ) : (
              <Link to="/logsign" className="header-login">
-               ðŸ‘¤ Log in / Sign up
+               Ã°Å¸â€˜Â¤ Log in / Sign up
              </Link>
           )}
         </nav>
@@ -64,9 +67,9 @@ export default function CourtDetail() {
             <div>
               <h1>{venue.name}</h1>
               <p className="detail-location">
-                <span>ðŸ“ {venue.location}</span>
+                <span>Ã°Å¸â€œÂ {venue.location}</span>
                 <span className="detail-rating">
-                  â˜… {venue.rating || "New"}
+                  Ã¢Ëœâ€¦ {venue.rating || "New"}
                 </span>
               </p>
             </div>
@@ -76,7 +79,7 @@ export default function CourtDetail() {
               to={"/booking/" + venue.id}
               className="button button-dark button-full"
             >
-              âš¡ Book This Venue
+              Ã¢Å¡Â¡ Book This Venue
             </Link>
           </div>
           <div className="detail-section">
@@ -95,11 +98,11 @@ export default function CourtDetail() {
           </div>
           <div className="detail-grid-section">
             <div className="detail-box">
-              <h2>ðŸ•’ Operating Hours</h2>
+              <h2>Ã°Å¸â€¢â€™ Operating Hours</h2>
               <p>Mon - Sun: 06:00 AM - 11:00 PM</p>
             </div>
             <div className="detail-box">
-              <h2>ðŸ“ Address</h2>
+              <h2>Ã°Å¸â€œÂ Address</h2>
               <p>{venue.location}</p>
             </div>
           </div>
@@ -107,36 +110,33 @@ export default function CourtDetail() {
             <h2>Amenities</h2>
             <div className="amenities-grid">
               {venue.amenities ? venue.amenities.map(amenity => (
-                <span key={amenity}>âœ“ {amenity}</span>
+                <span key={amenity}>Ã¢Å“â€œ {amenity}</span>
               )) : (
                  <>
-                   <span>âœ“ Parking</span>
-                   <span>âœ“ Changing Rooms</span>
-                   <span>âœ“ Drinking Water</span>
+                   <span>Ã¢Å“â€œ Parking</span>
+                   <span>Ã¢Å“â€œ Changing Rooms</span>
+                   <span>Ã¢Å“â€œ Drinking Water</span>
                  </>
               )}
             </div>
           </div>
           <div className="detail-section">
             <h2>Reviews</h2>
-            <ReviewItem
-              name="Rahul Sharma"
-              date="October 2026"
-              text="Excellent courts and well maintained facility. Highly recommend for badminton."
-              rating={5}
-            />
+            {reviews.length > 0 ? reviews.map(r => (
+                <ReviewItem key={r.id} name={r.playerName || "Player"} date={new Date().toLocaleDateString()} text={r.comment} rating={r.rating} />
+              )) : <p>No reviews yet.</p>}
           </div>
         </div>
         <div className="detail-sidebar">
           <div className="booking-widget">
             <div className="widget-price">
-              <strong>Starting from INR 200</strong>
+              <strong>Starting from INR {venue.startingPrice}</strong>
               <span>/ hour</span>
             </div>
             <div className="widget-rules">
-              <p>â€¢ Tournament Training Venue</p>
-              <p>â€¢ For more than 2 players, INR 50 extra per person</p>
-              <p>â€¢ Equipment available on rent</p>
+              <p>Ã¢â‚¬Â¢ Tournament Training Venue</p>
+              <p>Ã¢â‚¬Â¢ For more than 2 players, INR 50 extra per person</p>
+              <p>Ã¢â‚¬Â¢ Equipment available on rent</p>
             </div>
             <Link
               to={"/booking/" + venue.id}
@@ -152,18 +152,19 @@ export default function CourtDetail() {
 }
 
 function ReviewItem({ name, date, text, rating }) {
-  const stars = "â˜…".repeat(Math.round(rating || 5));
+  const stars = "Ã¢Ëœâ€¦".repeat(Math.round(rating || 5));
   return (
     <div className="review-item">
       <div className="review-header">
         <div className="review-avatar">{name.charAt(0)}</div>
         <div className="review-meta">
           <strong>{name} <span style={{color: '#ffc107'}}>{stars}</span></strong>
-          <time>ðŸ“… {date}</time>
+          <time>Ã°Å¸â€œâ€¦ {date}</time>
         </div>
       </div>
       <p>{text}</p>
     </div>
   );
 }
+
 

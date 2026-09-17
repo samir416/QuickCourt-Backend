@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { apiFetch } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
@@ -37,7 +37,7 @@ export default function Matches() {
     try {
       const payload = {
           ...formData,
-          matchTime: new Date(formData.matchTime).toISOString()
+          matchTime: new Date(formData.matchTime).toISOString(), maxPlayers: parseInt(formData.maxPlayers, 10)
       };
       await apiFetch(`/matches?userId=${user.id}`, {
         method: 'POST',
@@ -103,7 +103,7 @@ export default function Matches() {
                     <span style={{fontSize: '12px', color: '#666'}}>{new Date(m.matchTime).toLocaleString()}</span>
                 </div>
                 <h3 style={{margin: 0}}>{m.title}</h3>
-                <p style={{margin: 0, color: '#666', fontSize: '14px'}}>📍 {m.location}</p>
+                <p style={{margin: 0, color: '#666', fontSize: '14px'}}>ðŸ“ {m.location}</p>
                 <p style={{margin: 0, fontSize: '14px'}}>Organized by <strong>{m.creatorName}</strong></p>
                 
                 <div style={{marginTop: '10px', background: '#f8f9fa', padding: '10px', borderRadius: '4px'}}>
@@ -132,3 +132,4 @@ export default function Matches() {
     </main>
   );
 }
+

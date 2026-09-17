@@ -10,7 +10,13 @@ export function AuthProvider({ children }) {
     const storedUser = localStorage.getItem("qc_user");
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsed = JSON.parse(storedUser);
+        const normalized = {
+          ...parsed,
+          id: parsed.userId || parsed.id,
+          userId: parsed.userId || parsed.id
+        };
+        setUser(normalized);
       } catch(err) {
         console.error("Failed to parse user session", err);
       }
@@ -19,8 +25,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = (userData) => {
-    setUser(userData);
-    localStorage.setItem("qc_user", JSON.stringify(userData));
+    const normalizedUser = {
+      ...userData,
+      id: userData.userId || userData.id,
+      userId: userData.userId || userData.id
+    };
+    setUser(normalizedUser);
+    localStorage.setItem("qc_user", JSON.stringify(normalizedUser));
   };
 
   const logout = () => {

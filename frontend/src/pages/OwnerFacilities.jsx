@@ -1,4 +1,4 @@
-import OwnerSidebar from "../components/OwnerSidebar";
+﻿import OwnerSidebar from "../components/OwnerSidebar";
 import { useState, useEffect, useRef } from "react";
 import { apiFetch, API_BASE_URL } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -25,7 +25,7 @@ export default function OwnerFacilities() {
     if (!user) return;
     try {
       setLoading(true);
-      const data = await apiFetch(/owner/ + user.id + /venues);
+      const data = await apiFetch("/owner/" + user.id + "/venues");
       setFacilities(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message);
@@ -40,7 +40,7 @@ export default function OwnerFacilities() {
 
   const handleDelete = async (venueId) => {
     try {
-      await apiFetch(/venues/ + venueId, { method: 'DELETE' });
+      await apiFetch("/venues/" + venueId, { method: 'DELETE' });
       fetchFacilities();
     } catch (err) {
       alert("Failed to delete venue: " + err.message);
@@ -79,12 +79,12 @@ export default function OwnerFacilities() {
     try {
       let savedVenue;
       if (editingId) {
-        savedVenue = await apiFetch(/venues/ + editingId + ?ownerId= + user.id, {
+        savedVenue = await apiFetch("/venues/" + editingId + "?ownerId=" + user.id, {
           method: 'PUT',
           body: JSON.stringify(formData)
         });
       } else {
-        savedVenue = await apiFetch(/venues?ownerId= + user.id, {
+        savedVenue = await apiFetch("/venues?ownerId=" + user.id, {
           method: 'POST',
           body: JSON.stringify(formData)
         });
@@ -232,3 +232,4 @@ export default function OwnerFacilities() {
     </main>
   );
 }
+

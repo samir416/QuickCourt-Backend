@@ -21,7 +21,7 @@ public class OtpController {
             @RequestBody @Valid OtpRequest request) {
 
         return ResponseEntity.ok(
-                otpService.generateOtp(request.getEmail())
+                otpService.generateOtp(request.getEmail(), request.getType())
         );
     }
 

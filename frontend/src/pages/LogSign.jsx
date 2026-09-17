@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -70,10 +70,6 @@ export default function LogSign() {
         method: "POST",
         body: JSON.stringify({ name: fullName, email, password, role: dbRole }),
       });
-      await apiFetch("/auth/otp/send", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      });
       setStage("verify");
     } catch (err) {
       if (err.message && err.message.toLowerCase().includes("email")) {
@@ -108,9 +104,25 @@ export default function LogSign() {
 
   return (
     <main className="auth-page">
-      <section className="auth-art">
-        <div className="auth-art-overlay" />
-        <span className="auth-art-caption">QUICKCOURT / MEMBER ACCESS</span>
+      <section className="auth-art" style={{ position: 'relative', overflow: 'hidden', backgroundColor: 'var(--ink, #1d2821)' }}>
+        <img 
+          src="/login-bg.jpg" 
+          alt="QuickCourt Sports Facility" 
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', zIndex: 1 }} 
+        />
+        {/* Subtle dark green overlay for readability without destroying the image */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(29, 40, 33, 0.9) 0%, rgba(29, 40, 33, 0.4) 50%, rgba(29, 40, 33, 0.1) 100%)', zIndex: 2 }} />
+
+        <div className="auth-art-content" style={{ justifyContent: 'flex-end', paddingBottom: '12%', zIndex: 10 }}>
+          <div style={{ position: 'relative', color: '#ffffff' }}>
+            <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: '700', lineHeight: 1.1, margin: 0, letterSpacing: '-0.02em' }}>
+              QUICKCOURT
+            </h2>
+            <p style={{ marginTop: '12px', fontSize: 'clamp(14px, 1.5vw, 18px)', color: 'rgba(255, 255, 255, 0.85)', maxWidth: '320px', lineHeight: 1.4, fontWeight: '400' }}>
+              LOCAL SPORTS. SIMPLE BOOKING.
+            </p>
+          </div>
+        </div>
       </section>
       <section className="auth-panel">
         <Link className="auth-brand" to="/">
@@ -142,7 +154,31 @@ export default function LogSign() {
               {mode === "login" ? "LOGIN" : "SIGN UP"}
             </h1>
             <form onSubmit={handleSubmit} className="auth-form">
-              {formError && <div style={{ color: 'red', marginBottom: '15px' }}>{formError}</div>}
+              {formError && (
+                  <div style={{ color: 'red', marginBottom: '15px' }}>
+                    {formError}
+                    {formError.includes("verify your email") && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setFormError("");
+                          try {
+                            setIsSubmitting(true);
+                            await apiFetch("/auth/otp/send", { method: "POST", body: JSON.stringify({ email: userEmail, type: "VERIFICATION" }) });
+                            setStage("verify");
+                          } catch (e) {
+                            setFormError(e.message || "Failed to send OTP");
+                          } finally {
+                            setIsSubmitting(false);
+                          }
+                        }}
+                        style={{ display: "block", marginTop: "10px", padding: "5px 10px", background: "none", border: "1px solid currentColor", color: "inherit", cursor: "pointer", fontSize: "0.9em", borderRadius: "4px" }}
+                      >
+                        Resend Verification OTP
+                      </button>
+                    )}
+                  </div>
+                )}
               {mode === "signup" && (
                 <>
                   <label className="field-label profile-picture-field">
@@ -293,7 +329,7 @@ function ForgotPasswordPanel({ onBack, onProceed }) {
         if(!email) return setError("Enter your email.");
         try {
             setLoading(true);
-            await apiFetch("/auth/otp/send", { method: "POST", body: JSON.stringify({ email }) });
+            await apiFetch("/auth/otp/send", { method: "POST", body: JSON.stringify({ email, type: "RESET_PASSWORD" }) });
             onProceed(email);
         } catch(err) {
             setError(err.message || "Failed to send OTP");
@@ -351,18 +387,7 @@ function ResetPasswordPanel({ onBack, userEmail, onSuccess }) {
             <h1>Create New Password</h1>
             <p className="muted">Enter the 6-digit OTP sent to <strong>{userEmail}</strong> and your new password.</p>
             <form onSubmit={handleReset} className="auth-form">
-                <div className="code-inputs" style={{marginBottom:'20px'}}>
-                  {code.map((digit, index) => (
-                    <input
-                      key={index} maxLength="1" inputMode="numeric" value={digit}
-                      onChange={(e) => {
-                        const newCode = [...code];
-                        newCode[index] = e.target.value;
-                        setCode(newCode);
-                      }}
-                    />
-                  ))}
-                </div>
+                <OTPInput code={code} setCode={setCode} />
                 <PasswordField label="New Password" placeholder="8-20 characters" name="newPassword" visible={showPassword} onToggle={() => setShowPassword(!showPassword)} value={password} onChange={(e) => setPassword(e.target.value)} />
                 {error && <small style={{color:'red', display:'block', marginTop:'10px'}}>{error}</small>}
                 <button type="submit" className="button button-dark button-full" disabled={loading} style={{marginTop:'15px'}}>{loading ? 'Resetting...' : 'Reset Password'}</button>
@@ -388,7 +413,7 @@ function VerificationPanel({ onBack, userEmail, userName }) {
     try {
       await apiFetch("/auth/otp/verify", {
         method: "POST",
-        body: JSON.stringify({ email: userEmail, code: otpCode })
+        body: JSON.stringify({ email: userEmail, otp: otpCode })
       });
       setMessage("Email verified successfully. You can now log in.");
       setTimeout(() => {
@@ -401,7 +426,7 @@ function VerificationPanel({ onBack, userEmail, userName }) {
 
   const handleResend = async () => {
     try {
-      await apiFetch("/auth/otp/send", { method: "POST", body: JSON.stringify({ email: userEmail }) });
+      await apiFetch("/auth/otp/send", { method: "POST", body: JSON.stringify({ email: userEmail, type: "VERIFICATION" }) });
       setMessage("A new verification code was sent.");
       setError("");
     } catch (err) {
@@ -416,22 +441,7 @@ function VerificationPanel({ onBack, userEmail, userName }) {
       <p className="muted">
         We've sent a code to your email: <strong>{userEmail}</strong>
       </p>
-      <div className="code-inputs">
-        {code.map((digit, index) => (
-          <input
-            key={index}
-            maxLength="1"
-            inputMode="numeric"
-            value={digit}
-            onChange={(e) => {
-              const newCode = [...code];
-              newCode[index] = e.target.value;
-              setCode(newCode);
-            }}
-            aria-label={`Verification digit ${index + 1}`}
-          />
-        ))}
-      </div>
+      <OTPInput code={code} setCode={setCode} />
       {error && <small className="auth-error verification-message" style={{color: 'red'}}>{error}</small>}
       {message && <small className="auth-success verification-message">{message}</small>}
       <button
@@ -453,3 +463,13 @@ function VerificationPanel({ onBack, userEmail, userName }) {
     </div>
   );
 }
+
+
+
+function OTPInput({ code, setCode }) {
+  const otpRefs = useRef([]);
+  return (
+    <OTPInput code={code} setCode={setCode} />
+  );
+}
+

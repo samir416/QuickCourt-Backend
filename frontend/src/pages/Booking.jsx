@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import VenueFilters from "../components/VenueFilters";
 import VenueListingCard from "../components/VenueListingCard";
@@ -23,13 +23,15 @@ export default function Booking() {
   const [apiVenues, setApiVenues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 9;
 
   useEffect(() => {
     const fetchVenues = async () => {
       try {
         setLoading(true);
-        const data = await apiFetch("/venues");
-        setApiVenues(Array.isArray(data) ? data : []);
+        const data = await apiFetch("/venues?size=1000");
+        setApiVenues(Array.isArray(data) ? data : (data.content || []));
         setError(null);
       } catch (err) {
         setError(err.message);
@@ -122,7 +124,7 @@ export default function Booking() {
           
           {!loading && !error && visibleVenues.length > 0 ? (
             <div className="listing-grid">
-              {visibleVenues.map((venue) => (
+              {(visibleVenues.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)).map((venue) => (
                 <VenueListingCard venue={venue} key={venue.id || venue.name} />
               ))}
             </div>
@@ -139,16 +141,15 @@ export default function Booking() {
             </div>
           ) : null}
           
-          <nav className="pagination" aria-label="Venue pages">
-            <button aria-label="Previous page">&lt;</button>
-            <button className="current-page">1</button>
-            <button>2</button>
-            <button>3</button>
-            <button>4</button>
-            <span>...</span>
-            <button>11</button>
-            <button aria-label="Next page">&gt;</button>
-          </nav>
+          {Math.ceil(visibleVenues.length / itemsPerPage) > 1 && (
+            <nav className="pagination" aria-label="Venue pages">
+              <button aria-label="Previous page" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>&lt;</button>
+              {Array.from({length: Math.ceil(visibleVenues.length / itemsPerPage)}, (_, i) => i + 1).map(p => (
+                <button key={p} className={currentPage === p ? "current-page" : ""} onClick={() => setCurrentPage(p)}>{p}</button>
+              ))}
+              <button aria-label="Next page" disabled={currentPage === Math.ceil(visibleVenues.length / itemsPerPage)} onClick={() => setCurrentPage(p => p + 1)}>&gt;</button>
+            </nav>
+            )}
         </section>
       </div>
       <footer className="directory-footer">
@@ -157,3 +158,6 @@ export default function Booking() {
     </main>
   );
 }
+
+
+

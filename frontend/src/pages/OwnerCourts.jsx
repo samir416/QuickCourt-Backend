@@ -1,4 +1,4 @@
-import OwnerSidebar from "../components/OwnerSidebar";
+﻿import OwnerSidebar from "../components/OwnerSidebar";
 import { useState, useEffect } from "react";
 import { apiFetch } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -26,9 +26,9 @@ export default function OwnerCourts() {
     if (!user) return;
     try {
       setLoading(true);
-      const data = await apiFetch(/owner/ + user.id + /courts);
+      const data = await apiFetch("/owner/" + user.id + "/courts");
       setCourts(Array.isArray(data) ? data : []);
-      const vData = await apiFetch(/owner/ + user.id + /venues);
+      const vData = await apiFetch("/owner/" + user.id + "/venues");
       setVenues(Array.isArray(vData) ? vData : []);
     } catch (err) {
       setError(err.message);
@@ -43,7 +43,7 @@ export default function OwnerCourts() {
 
   const handleDelete = async (courtId) => {
     try {
-      await apiFetch(/courts/ + courtId, { method: 'DELETE' });
+      await apiFetch("/courts/" + courtId, { method: 'DELETE' });
       fetchCourts();
     } catch (err) {
       alert("Failed to delete court: " + err.message);
@@ -75,12 +75,12 @@ export default function OwnerCourts() {
     }
     try {
       if (editingId) {
-        await apiFetch(/courts/ + editingId, {
+        await apiFetch("/courts/" + editingId, {
           method: 'PUT',
           body: JSON.stringify(formData)
         });
       } else {
-        await apiFetch(/courts?ownerId= + user.id, {
+        await apiFetch("/courts?ownerId=" + user.id, {
           method: 'POST',
           body: JSON.stringify(formData)
         });
@@ -94,7 +94,7 @@ export default function OwnerCourts() {
 
   const fetchSlots = async (courtId, date) => {
     try {
-      const data = await apiFetch(/time-slots/court/ + courtId + ?date= + date);
+      const data = await apiFetch("/time-slots/court/" + courtId + "?date=" + date);
       setSlots(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
@@ -108,7 +108,7 @@ export default function OwnerCourts() {
 
   const handleAddSlot = async () => {
     try {
-      await apiFetch(/time-slots?ownerId= + user.id, {
+      await apiFetch("/time-slots?ownerId=" + user.id, {
         method: 'POST',
         body: JSON.stringify({ courtId: selectedCourt.id, date: slotDate, startTime: newSlotTime + ':00', isAvailable: true })
       });
@@ -122,9 +122,9 @@ export default function OwnerCourts() {
     try {
       if (slot.isAvailable) {
         const reason = prompt("Reason for blocking?", "Maintenance");
-        if (reason) await apiFetch(/time-slots/ + slot.id + /block?reason= + reason + &ownerId= + user.id, { method: 'PUT' });
+        if (reason) await apiFetch("/time-slots/" + slot.id + "/block?reason=" + reason + "&ownerId=" + user.id, { method: 'PUT' });
       } else {
-        await apiFetch(/time-slots/ + slot.id + /unblock?ownerId= + user.id, { method: 'PUT' });
+        await apiFetch("/time-slots/" + slot.id + "/unblock?ownerId=" + user.id, { method: 'PUT' });
       }
       fetchSlots(selectedCourt.id, slotDate);
     } catch (err) {
@@ -240,3 +240,4 @@ export default function OwnerCourts() {
     </main>
   );
 }
+

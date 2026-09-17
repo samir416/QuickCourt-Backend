@@ -10,15 +10,15 @@ export default function VenueListingCard({ venue }) {
         />
         {venue.rating && (
           <div className="listing-badge">
-            â˜… {venue.rating || "4.5"} <small>({venue.reviews || 6})</small>
+            â˜… {venue.rating || "New"} <small>({venue.totalReviews || 0})</small>
           </div>
         )}
       </div>
       <div className="listing-content">
-        <p className="listing-location">ðŸ“ {venue.location}</p>
+        <p className="listing-location">ðŸ“ {venue.city || venue.address}</p>
         <h3>{venue.name}</h3>
         <p className="listing-price">
-          â‚¹ {venue.price || 200} <small>per hour</small>
+          â‚¹ {venue.startingPrice} <small>per hour</small>
         </p>
         <Link to={"/booking/" + venue.id} className="button button-full">
           View details
@@ -27,4 +27,5 @@ export default function VenueListingCard({ venue }) {
     </div>
   );
 }
+
 

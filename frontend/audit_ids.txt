@@ -1,0 +1,55 @@
+﻿
+Line                                                                                                                   
+----                                                                                                                   
+  if (context === undefined) {                                                                                         
+import { apiFetch } from "../services/api";                                                                            
+      const data = await apiFetch(`/admin/venues/pending?adminId=${user.id}`);                                         
+      await apiFetch(`/admin/venues/${venueId}/${action}`, {                                                           
+                  <td style={{ padding: '15px 10px' }}>{v.ownerId}</td>                                                
+        const data = await apiFetch("/admin/dashboard/stats");                                                         
+      await apiFetch("/profile/" + user.id, {                                                                          
+      const data = await apiFetch(`/admin/users?adminId=${user.id}`);                                                  
+  const handleAction = async (userId, action) => {                                                                     
+      await apiFetch(`/admin/users/${userId}/${action}?adminId=${user.id}`, { method: 'PUT' });                        
+        const data = await apiFetch("/venues");                                                                        
+        const data = await apiFetch("/bookings/user/" + user.id);                                                      
+      await apiFetch("/bookings/" + bookingId + "/cancel", { method: "PUT" });                                         
+      const data = await apiFetch("/bookings/user/" + user.id);                                                        
+        const venueData = await apiFetch("/venues/" + venueId);                                                        
+        const courtsData = await apiFetch("/venues/" + venueId + "/courts");                                           
+      apiFetch("/time-slots/court/" + court + "/available?date=" + date)                                               
+        playerId: user.id,                                                                                             
+      const bookingData = await apiFetch("/bookings", {                                                                
+         await apiFetch("/bookings/" + bookingData.id + "/payment", { method: "POST" });                               
+        const data = await apiFetch("/venues/" + venueId);                                                             
+        const data = await apiFetch("/auth/login", {                                                                   
+      await apiFetch("/auth/register", {                                                                               
+                            await apiFetch("/auth/otp/send", { method: "POST", body: JSON.stringify({ email: userEma...
+            await apiFetch("/auth/otp/send", { method: "POST", body: JSON.stringify({ email, type: "RESET_PASSWORD" ...
+            await apiFetch("/auth/reset-password", {                                                                   
+      await apiFetch("/auth/otp/verify", {                                                                             
+      await apiFetch("/auth/otp/send", { method: "POST", body: JSON.stringify({ email: userEmail, type: "VERIFICATIO...
+      const data = await apiFetch(`/matches?userId=${user.id}`);                                                       
+      await apiFetch(`/matches?userId=${user.id}`, {                                                                   
+      await apiFetch(`/matches/${matchId}/${action}?userId=${user.id}`, { method: 'POST' });                           
+        const data = await apiFetch(`/owner/${user.id}/bookings`);                                                     
+      const data = await apiFetch(/owner/ + user.id + /courts);                                                        
+      const vData = await apiFetch(/owner/ + user.id + /venues);                                                       
+      await apiFetch(/courts/ + courtId, { method: 'DELETE' });                                                        
+        await apiFetch(/courts/ + editingId, {                                                                         
+        await apiFetch(/courts?ownerId= + user.id, {                                                                   
+      const data = await apiFetch(/time-slots/court/ + courtId + ?date= + date);                                       
+      await apiFetch(/time-slots?ownerId= + user.id, {                                                                 
+        if (reason) await apiFetch(/time-slots/ + slot.id + /block?reason= + reason + &ownerId= + user.id, { method:...
+        await apiFetch(/time-slots/ + slot.id + /unblock?ownerId= + user.id, { method: 'PUT' });                       
+        const data = await apiFetch("/owner/dashboard?ownerId=" + user.id);                                            
+import { apiFetch, API_BASE_URL } from "../services/api";                                                              
+      const data = await apiFetch(/owner/ + user.id + /venues);                                                        
+      await apiFetch(/venues/ + venueId, { method: 'DELETE' });                                                        
+        savedVenue = await apiFetch(/venues/ + editingId + ?ownerId= + user.id, {                                      
+        savedVenue = await apiFetch(/venues?ownerId= + user.id, {                                                      
+        formPayload.append('ownerId', user.id);                                                                        
+      const data = await apiFetch(`/profile/${user.id}`, {                                                             
+export const apiFetch = async (endpoint, options = {}) => {                                                            
+
+

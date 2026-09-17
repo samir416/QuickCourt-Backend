@@ -20,4 +20,6 @@ public class OtpRequest {
     private String email;
 
     private String otp;
+    
+    private String type; // e.g. "RESET_PASSWORD" or "VERIFICATION"
 }

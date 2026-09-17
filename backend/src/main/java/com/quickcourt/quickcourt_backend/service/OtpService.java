@@ -6,6 +6,9 @@ import com.quickcourt.quickcourt_backend.entity.User;
 import com.quickcourt.quickcourt_backend.repository.OtpVerificationRepository;
 import com.quickcourt.quickcourt_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,20 +21,17 @@ public class OtpService {
 
     private final OtpVerificationRepository otpVerificationRepository;
     private final UserRepository userRepository;
+    private final JavaMailSender mailSender;
+    
+    @Value("${spring.mail.username}")
+    private String mailFrom;
 
     @Transactional
-    public OtpResponse generateOtp(String email) {
+    public OtpResponse generateOtp(String email, String type) {
         String normalizedEmail = email.toLowerCase().trim();
 
-        User user = userRepository.findByEmail(normalizedEmail)
+        userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (user.getEmailVerified()) {
-            return OtpResponse.builder()
-                    .success(true)
-                    .message("Email is already verified")
-                    .build();
-        }
 
         String otp = String.valueOf(
                 ThreadLocalRandom.current().nextInt(100000, 1000000)
@@ -48,13 +48,26 @@ public class OtpService {
 
         otpVerificationRepository.save(verification);
 
-        System.out.println(
-                "QuickCourt OTP for " + normalizedEmail + ": " + otp
-        );
+        // Send actual email
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(mailFrom);
+            message.setTo(normalizedEmail);
+            String subject = "RESET_PASSWORD".equalsIgnoreCase(type) ? 
+                    "QuickCourt - Password Reset OTP" : "QuickCourt - Email Verification OTP";
+            message.setSubject(subject);
+            message.setText("QuickCourt\n\nYour verification OTP is:\n\n" + otp + "\n\nThis OTP is valid for 5 minutes.\n\nDo not share this OTP with anyone.");
+            
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("SMTP Email Delivery Failed: " + e.getMessage());
+            // Throw exception to roll back transaction and notify frontend
+            throw new RuntimeException("Unable to send OTP. Please try again.");
+        }
 
         return OtpResponse.builder()
                 .success(true)
-                .message("OTP generated successfully")
+                .message("OTP generated and sent successfully")
                 .build();
     }
 

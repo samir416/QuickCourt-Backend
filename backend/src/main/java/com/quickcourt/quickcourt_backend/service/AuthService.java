@@ -19,12 +19,29 @@ public class AuthService {
 
     public AuthResponse register(AuthRequest request) {
         String email = request.getEmail().toLowerCase().trim();
-
-        if (userRepository.existsByEmail(email)) {
-            throw new RuntimeException("Email already registered");
-        }
-
         User.Role role = parseRole(request.getRole());
+
+        User existingUser = userRepository.findByEmail(email).orElse(null);
+        if (existingUser != null) {
+            if (existingUser.getEmailVerified()) {
+                throw new RuntimeException("Email already registered");
+            } else {
+                existingUser.setName(request.getName());
+                existingUser.setPassword(passwordEncoder.encode(request.getPassword()));
+                existingUser.setRole(role);
+                userRepository.save(existingUser);
+                
+                otpService.generateOtp(existingUser.getEmail(), "VERIFICATION");
+                
+                return AuthResponse.builder()
+                        .userId(existingUser.getId())
+                        .name(existingUser.getName())
+                        .email(existingUser.getEmail())
+                        .role(existingUser.getRole().name())
+                        .message("Email is already registered but not verified. A new verification OTP has been sent.")
+                        .build();
+            }
+        }
 
         User user = User.builder()
                 .name(request.getName())
@@ -37,7 +54,7 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
-        otpService.generateOtp(savedUser.getEmail());
+        otpService.generateOtp(savedUser.getEmail(), "VERIFICATION");
 
         return AuthResponse.builder()
                 .userId(savedUser.getId())
@@ -59,15 +76,14 @@ public class AuthService {
             throw new RuntimeException("Account is inactive");
         }
 
-        if (!user.getEmailVerified()) {
-            throw new RuntimeException("Please verify your email before login");
-        }
-
         if (!passwordEncoder.matches(
                 request.getPassword(),
                 user.getPassword())) {
-
             throw new RuntimeException("Invalid email or password");
+        }
+
+        if (!user.getEmailVerified()) {
+            throw new RuntimeException("Please verify your email before login");
         }
 
         return AuthResponse.builder()
