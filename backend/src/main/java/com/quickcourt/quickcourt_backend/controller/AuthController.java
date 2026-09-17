@@ -34,4 +34,12 @@ public class AuthController {
                 authService.login(request)
         );
     }
+    @PostMapping("/reset-password")
+    public ResponseEntity<AuthResponse> resetPassword(
+            @Valid @RequestBody com.quickcourt.quickcourt_backend.dto.ResetPasswordRequest request) {
+
+        return ResponseEntity.ok(
+                authService.resetPassword(request.getEmail(), request.getOtp(), request.getNewPassword())
+        );
+    }
 }

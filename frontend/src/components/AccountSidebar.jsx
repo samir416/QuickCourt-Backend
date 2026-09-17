@@ -1,14 +1,16 @@
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function AccountSidebar({ active }) {
+  const { user, logout } = useAuth();
   return (
     <aside className="account-sidebar">
-      <span className="avatar avatar-large">MA</span>
-      <h1>Mitchell Admin</h1>
+      <span className="avatar avatar-large">{user && user.name ? user.name.substring(0,2).toUpperCase() : "MA"}</span>
+      <h1>{user ? user.name : "Player"}</h1>
       <p>
         9999999999
         <br />
-        mitchelladmin2017@gmail.com
+        {user ? user.email : "user@example.com"}
       </p>
       <nav>
         <Link
@@ -23,7 +25,7 @@ export default function AccountSidebar({ active }) {
         >
           All bookings
         </Link>
-        <Link to="/">Log out</Link>
+        <button onClick={() => { logout(); window.location.href = "/"; }} style={{background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', padding: '0.75rem 1rem', fontSize: '1rem', color: '#dc2626'}}>Log out</button>
       </nav>
     </aside>
   );

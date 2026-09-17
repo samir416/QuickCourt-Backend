@@ -92,4 +92,18 @@ public class AuthService {
             throw new RuntimeException("Invalid role");
         }
     }
+    public AuthResponse resetPassword(String email, String otp, String newPassword) {
+        otpService.verifyOtp(email, otp);
+        User user = userRepository.findByEmail(email.toLowerCase().trim())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        return AuthResponse.builder()
+                .userId(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole().name())
+                .message("Password reset successfully")
+                .build();
+    }
 }

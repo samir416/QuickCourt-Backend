@@ -1,49 +1,57 @@
 import AccountSidebar from "../components/AccountSidebar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { venues } from "../data/venues";
-
-const bookingData = [
-  {
-    venueId: "skyline-badminton",
-    day: "18",
-    month: "JUN",
-    date: "18 June 2026",
-    time: "5:00 PM - 6:00 PM",
-    location: "Rajkot, Gujarat",
-    status: "Confirmed",
-    type: "upcoming",
-  },
-  {
-    venueId: "sbr-badminton",
-    day: "10",
-    month: "JUN",
-    date: "10 June 2026",
-    time: "5:00 PM - 6:00 PM",
-    location: "Ahmedabad, Gujarat",
-    status: "Completed",
-    type: "past",
-  },
-  {
-    venueId: "green-kick",
-    day: "04",
-    month: "JUN",
-    date: "04 June 2026",
-    time: "7:00 PM - 8:00 PM",
-    location: "Thaltej, Ahmedabad",
-    status: "Cancelled",
-    type: "cancelled",
-  },
-];
+import { apiFetch } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function Bookings() {
   const [activeTab, setActiveTab] = useState("all");
-  const [cancelled, setCancelled] = useState(false);
-  const visibleBookings = bookingData.filter((booking) =>
+  const [apiBookings, setApiBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (!user) {
+        setLoading(false);
+        setError("Please log in to view your bookings.");
+        return;
+      }
+      try {
+        setLoading(true);
+        const data = await apiFetch("/bookings/user/" + user.id);
+        setApiBookings(Array.isArray(data) ? data : []);
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+        setApiBookings([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBookings();
+  }, [user]);
+
+  const handleCancelBooking = async (bookingId) => {
+    try {
+      await apiFetch("/bookings/" + bookingId + "/cancel", { method: "PUT" });
+      const data = await apiFetch("/bookings/user/" + user.id);
+      setApiBookings(Array.isArray(data) ? data : []);
+    } catch(err) {
+      alert("Failed to cancel: " + err.message);
+    }
+  };
+
+  const visibleBookings = apiBookings.filter((booking) =>
     activeTab === "all"
-      ? booking.type !== "cancelled"
-      : booking.type === "cancelled",
+      ? booking.status !== "CANCELLED"
+      : booking.status === "CANCELLED",
   );
+  
+  const allCount = apiBookings.filter(b => b.status !== "CANCELLED").length;
+  const cancelCount = apiBookings.filter(b => b.status === "CANCELLED").length;
 
   return (
     <main className="account-page bookings-wireframe-page">
@@ -71,95 +79,78 @@ export default function Bookings() {
             onClick={() => setActiveTab("all")}
             role="tab"
           >
-            All bookings{" "}
-            <span>
-              {
-                bookingData.filter((booking) => booking.type !== "cancelled")
-                  .length
-              }
-            </span>
+            All bookings <span>{allCount}</span>
           </button>
           <button
             className={activeTab === "cancelled" ? "active" : ""}
             onClick={() => setActiveTab("cancelled")}
             role="tab"
           >
-            Cancelled{" "}
-            <span>
-              {
-                bookingData.filter((booking) => booking.type === "cancelled")
-                  .length
-              }
-            </span>
+            Cancelled <span>{cancelCount}</span>
           </button>
         </div>
+        
+        {loading && <p style={{marginTop:'20px'}}>Loading bookings...</p>}
+        {error && <p style={{color: 'red', marginTop:'20px'}}>{error}</p>}
+
         <div className="booking-history">
-          {visibleBookings.length > 0 ? (
+          {!loading && !error && visibleBookings.length > 0 ? (
             visibleBookings.map((booking) => {
-              const venue =
-                venues.find((item) => item.id === booking.venueId) || venues[0];
-              const isCancelled =
-                (cancelled && booking.type === "upcoming") ||
-                booking.type === "cancelled";
+              const isCancelled = booking.status === "CANCELLED";
+              const [year, month, day] = booking.bookingDate ? booking.bookingDate.split("-") : ["", "", ""];
+              const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+              const monthName = month ? months[parseInt(month, 10) - 1] : "?";
+
               return (
-                <article className="booking-record" key={booking.venueId}>
+                <article className="booking-record" key={booking.id}>
                   <div className="booking-date">
-                    <strong>{booking.day}</strong>
-                    <span>{booking.month}</span>
+                    <strong>{day || "?"}</strong>
+                    <span>{monthName}</span>
                     <small>
-                      {booking.type === "past"
-                        ? "PAST"
-                        : booking.type === "cancelled"
-                          ? "CANCELLED"
-                          : "UPCOMING"}
+                      {isCancelled ? "CANCELLED" : "UPCOMING"}
                     </small>
                   </div>
-                  <Link className="history-art" to={`/booking/${venue.id}`}>
-                    <img src={venue.image} alt={venue.alt} />
-                    <span>{venue.type}</span>
+                  <Link className="history-art" to={`/booking/${booking.venueId || 1}`}>
+                    <img src="https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=300&q=80" alt="Venue" />
+                    <span>Court</span>
                   </Link>
                   <div className="booking-record-info">
                     <div className="booking-record-title">
                       <h3>
-                        {venue.name} <small>({venue.type})</small>
+                        {booking.venueName || "Venue"} <small>({booking.courtName})</small>
                       </h3>
                       <span
                         className={
                           isCancelled
                             ? "status status-cancelled"
-                            : booking.type === "past"
-                              ? "status status-muted"
-                              : "status"
+                            : "status"
                         }
                       >
-                        {isCancelled ? "Cancelled" : booking.status}
+                        {booking.status}
                       </span>
                     </div>
                     <p>
-                      {booking.date} <span>/</span> {booking.time}
+                      {booking.bookingDate} <span>/</span> {booking.startTime} ({booking.durationHours} hr)
                     </p>
-                    <p>{booking.location}</p>
+                    <p>Ahmedabad</p>
                   </div>
                   <div className="booking-actions">
-                    {booking.type === "upcoming" && !isCancelled && (
+                    {booking.status === "CONFIRMED" && (
                       <button
                         className="outline-button"
-                        onClick={() => setCancelled(true)}
+                        onClick={() => handleCancelBooking(booking.id)}
                       >
                         Cancel booking
                       </button>
                     )}
-                    {booking.type === "past" && (
-                      <button className="outline-button">Write review</button>
-                    )}
-                    <Link className="text-action" to={`/booking/${venue.id}`}>
+                    <Link className="text-action" to={`/booking/${booking.venueId || 1}`}>
                       View venue -&gt;
                     </Link>
                   </div>
                 </article>
               );
             })
-          ) : (
+          ) : !loading && !error ? (
             <div className="empty-bookings">
               <h3>No {activeTab} bookings</h3>
               <p>Your {activeTab} court reservations will appear here.</p>
@@ -167,7 +158,7 @@ export default function Bookings() {
                 Find a court -&gt;
               </Link>
             </div>
-          )}
+          ) : null}
         </div>
       </section>
     </main>

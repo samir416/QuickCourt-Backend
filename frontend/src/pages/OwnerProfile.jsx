@@ -1,4 +1,4 @@
-﻿import OwnerSidebar from "../components/OwnerSidebar";
+import OwnerSidebar from "../components/OwnerSidebar";
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../services/api";

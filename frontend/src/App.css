@@ -1805,11 +1805,11 @@ select {
 .auth-page {
   height: calc(100vh - 80px);
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
 }
 .auth-panel {
   max-height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
   padding-bottom: 28px;
   padding-top: 28px;
 }
@@ -2280,7 +2280,7 @@ select {
   padding: 10px;
 }
 .sports-options button:before {
-  content: "G��";
+  content: "GÃ–Ã³";
   display: block;
   font-size: 18px;
   margin-bottom: 4px;
@@ -3311,3 +3311,26 @@ select {
     max-width: 620px;
   }
 }
+
+.site-nav { gap: 4px; display: flex; align-items: center; }
+.site-nav a { padding: 10px 16px; border-radius: 20px; transition: color 0.3s ease, background-color 0.3s ease; }
+.site-nav a.active { font-weight: 600; color: #000; background-color: transparent !important; }
+.site-nav a:hover { background-color: rgba(0,0,0,0.03); color: #000; border-radius: 20px; }
+
+/* Hide native password reveal button */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input[type="password"]::-webkit-contacts-auto-fill-button,
+input[type="password"]::-webkit-credentials-auto-fill-button {
+    display: none !important;
+}
+
+/* Hide scrollbar globally but allow scroll */
+* {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+*::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+

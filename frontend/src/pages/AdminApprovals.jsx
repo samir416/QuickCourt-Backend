@@ -1,16 +1,19 @@
-﻿import AdminSidebar from "../components/AdminSidebar";
+import AdminSidebar from "../components/AdminSidebar";
 import { useState, useEffect } from "react";
 import { apiFetch } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function AdminApprovals() {
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { user } = useAuth();
 
   const fetchPending = async () => {
+    if (!user) return;
     try {
       setLoading(true);
-      const data = await apiFetch("/admin/venues/pending");
+      const data = await apiFetch(`/admin/venues/pending?adminId=${user.id}`);
       setVenues(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message);
@@ -21,11 +24,14 @@ export default function AdminApprovals() {
 
   useEffect(() => {
     fetchPending();
-  }, []);
+  }, [user]);
 
   const handleAction = async (venueId, action) => {
     try {
-      await apiFetch(`/admin/venues/${venueId}/${action}`, { method: 'PUT' });
+      await apiFetch(`/admin/venues/${venueId}/${action}`, { 
+        method: 'PUT',
+        body: JSON.stringify({ adminId: user.id, comment: "Approved/Rejected by admin" })
+      });
       fetchPending();
     } catch (err) {
       alert(`Failed to ${action} venue: ` + err.message);

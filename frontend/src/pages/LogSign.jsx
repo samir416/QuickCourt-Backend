@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { apiFetch } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function LogSign() {
-  const [mode, setMode] = useState("signup");
+  const [mode, setMode] = useState("login");
   const [stage, setStage] = useState("form");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -10,35 +12,88 @@ export default function LogSign() {
   const [emailError, setEmailError] = useState("");
   const [imageError, setImageError] = useState("");
   const [resetMessage, setResetMessage] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userName, setUserName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const email = formData.get("email");
     const password = formData.get("password");
     const confirmPassword = formData.get("confirmPassword");
+    const fullName = formData.get("fullName");
+    const roleType = formData.get("roleType");
     const passwordPattern = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,20}$/;
 
     setEmailError("");
     setPasswordError("");
+    setFormError("");
+    setUserEmail(email);
+    if (fullName) setUserName(fullName);
+
+    if (imageError) return;
+    setIsSubmitting(true);
 
     if (mode === "login") {
-      navigate("/");
+      try {
+        const data = await apiFetch("/auth/login", {
+          method: "POST",
+          body: JSON.stringify({ email, password }),
+        });
+        login(data);
+        if (data.role === "ADMIN") navigate("/admin/dashboard");
+        else if (data.role === "FACILITY_OWNER") navigate("/owner/dashboard");
+        else navigate("/");
+      } catch (err) {
+        setFormError(err.message || "Login failed");
+      } finally {
+        setIsSubmitting(false);
+      }
       return;
     }
-    if (imageError) return;
-    if (email === "user@example.com") {
-      setEmailError("This email already exists.");
-      return;
-    }
+
     if (!passwordPattern.test(password) || password !== confirmPassword) {
       setPasswordError(
-        "Use 8–20 characters with at least one uppercase letter, one number, and one special symbol like @ or #.",
+        "Use 8-20 characters with at least one uppercase letter, one number, and one special symbol like @ or #."
       );
+      setIsSubmitting(false);
       return;
     }
-    setStage("verify");
+
+    try {
+      const dbRole = roleType === "Facility Owner" ? "FACILITY_OWNER" : "PLAYER";
+      await apiFetch("/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ name: fullName, email, password, role: dbRole }),
+      });
+      await apiFetch("/auth/otp/send", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      setStage("verify");
+    } catch (err) {
+      if (err.message && err.message.toLowerCase().includes("email")) {
+        setEmailError(err.message);
+      } else {
+        setFormError(err.message || "Registration failed");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file && file.size > 2 * 1024 * 1024) {
+      setImageError("File size should not exceed 2MB");
+      e.target.value = "";
+    } else {
+      setImageError("");
+    }
   };
 
   const switchMode = (nextMode) => {
@@ -48,24 +103,12 @@ export default function LogSign() {
     setEmailError("");
     setImageError("");
     setResetMessage("");
-  };
-
-  const handleImageChange = (event) => {
-    const image = event.target.files[0];
-    setImageError(
-      image && image.size > 1024 * 1024
-        ? "Oops! The image is too large. Please upload an image smaller than 1 MB."
-        : "",
-    );
+    setFormError("");
   };
 
   return (
     <main className="auth-page">
       <section className="auth-art">
-        <img
-          src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1400&q=90"
-          alt="Football players on a green sports field"
-        />
         <div className="auth-art-overlay" />
         <span className="auth-art-caption">QUICKCOURT / MEMBER ACCESS</span>
       </section>
@@ -74,7 +117,11 @@ export default function LogSign() {
           quickcourt
         </Link>
         {stage === "verify" ? (
-          <VerificationPanel onBack={() => setStage("form")} />
+          <VerificationPanel onBack={() => setStage("form")} userEmail={userEmail} userName={userName} />
+        ) : stage === "forgot" ? (
+          <ForgotPasswordPanel onBack={() => setStage("form")} onProceed={(email) => { setUserEmail(email); setStage("reset"); }} />
+        ) : stage === "reset" ? (
+          <ResetPasswordPanel onBack={() => setStage("form")} userEmail={userEmail} onSuccess={() => setStage("form")} />
         ) : (
           <>
             <div className="auth-tabs">
@@ -95,6 +142,7 @@ export default function LogSign() {
               {mode === "login" ? "LOGIN" : "SIGN UP"}
             </h1>
             <form onSubmit={handleSubmit} className="auth-form">
+              {formError && <div style={{ color: 'red', marginBottom: '15px' }}>{formError}</div>}
               {mode === "signup" && (
                 <>
                   <label className="field-label profile-picture-field">
@@ -111,14 +159,14 @@ export default function LogSign() {
                   </label>
                   <label className="field-label">
                     Sign up as
-                    <select defaultValue="Player">
+                    <select name="roleType" defaultValue="Player">
                       <option>Player</option>
                       <option>Facility Owner</option>
                     </select>
                   </label>
                   <label className="field-label">
                     Full name
-                    <input required placeholder="Your name" />
+                    <input name="fullName" required placeholder="Your name" />
                   </label>
                 </>
               )}
@@ -160,11 +208,7 @@ export default function LogSign() {
                   <button
                     className="forgot-link"
                     type="button"
-                    onClick={() =>
-                      setResetMessage(
-                        "A password reset link was sent to your email.",
-                      )
-                    }
+                    onClick={() => setStage("forgot")}
                   >
                     Forgot password?
                   </button>
@@ -173,8 +217,8 @@ export default function LogSign() {
                   )}
                 </>
               )}
-              <button className="button button-dark button-full" type="submit">
-                {mode === "login" ? "Log in ->" : "Sign up"}
+              <button className="button button-dark button-full" type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Please wait..." : (mode === "login" ? "Log in ->" : "Sign up")}
               </button>
             </form>
             <p className="auth-switch">
@@ -196,16 +240,19 @@ export default function LogSign() {
   );
 }
 
-function PasswordField({ label, name, placeholder, visible, onToggle }) {
+function PasswordField({ label, name, placeholder, visible, onToggle, value, onChange }) {
   return (
     <label className="field-label password-field">
       {label}
-      <span className="password-input-wrap">
+      <span className="password-input-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
         <input
           required
           name={name}
           type={visible ? "text" : "password"}
           placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          style={{ width: '100%', paddingRight: '40px' }}
         />
         <button
           className="password-toggle"
@@ -213,52 +260,193 @@ function PasswordField({ label, name, placeholder, visible, onToggle }) {
           onClick={onToggle}
           aria-label={visible ? `Hide ${label}` : `Show ${label}`}
           title={visible ? "Hide password" : "Show password"}
+          style={{
+            position: 'absolute', right: '10px', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex'
+          }}
         >
-          {visible ? "◉" : "◌"}
+          {visible ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+              <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+              <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+              <line x1="2" y1="2" x2="22" y2="22" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          )}
         </button>
       </span>
     </label>
   );
 }
 
-function VerificationPanel({ onBack }) {
+function ForgotPasswordPanel({ onBack, onProceed }) {
+    const [email, setEmail] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+    
+    const handleSend = async (e) => {
+        e.preventDefault();
+        if(!email) return setError("Enter your email.");
+        try {
+            setLoading(true);
+            await apiFetch("/auth/otp/send", { method: "POST", body: JSON.stringify({ email }) });
+            onProceed(email);
+        } catch(err) {
+            setError(err.message || "Failed to send OTP");
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    return (
+        <div className="verification-panel">
+            <h1>Reset Password</h1>
+            <p className="muted">Enter your email address to receive an OTP.</p>
+            <form onSubmit={handleSend} className="auth-form">
+                <label className="field-label">Email
+                    <input type="email" required value={email} onChange={e=>setEmail(e.target.value)} />
+                </label>
+                {error && <small style={{color:'red'}}>{error}</small>}
+                <button type="submit" className="button button-dark button-full" disabled={loading} style={{marginTop:'15px'}}>{loading ? 'Sending...' : 'Send OTP'}</button>
+            </form>
+            <button className="back-button" onClick={onBack} style={{marginTop:'20px'}}>Back to login</button>
+        </div>
+    );
+}
+
+function ResetPasswordPanel({ onBack, userEmail, onSuccess }) {
+    const [code, setCode] = useState(Array(6).fill(""));
+    const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+    const passwordPattern = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,20}$/;
+
+    const handleReset = async (e) => {
+        e.preventDefault();
+        const otpCode = code.join("");
+        if (otpCode.length < 6) return setError("Please enter all 6 digits.");
+        if (!passwordPattern.test(password)) return setError("Use 8-20 characters with at least one uppercase letter, one number, and one special symbol.");
+        try {
+            setLoading(true);
+            await apiFetch("/auth/reset-password", {
+                method: "POST",
+                body: JSON.stringify({ email: userEmail, otp: otpCode, newPassword: password })
+            });
+            alert("Password reset successfully! Please log in.");
+            onSuccess();
+        } catch(err) {
+            setError(err.message || "Failed to reset password.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="verification-panel">
+            <h1>Create New Password</h1>
+            <p className="muted">Enter the 6-digit OTP sent to <strong>{userEmail}</strong> and your new password.</p>
+            <form onSubmit={handleReset} className="auth-form">
+                <div className="code-inputs" style={{marginBottom:'20px'}}>
+                  {code.map((digit, index) => (
+                    <input
+                      key={index} maxLength="1" inputMode="numeric" value={digit}
+                      onChange={(e) => {
+                        const newCode = [...code];
+                        newCode[index] = e.target.value;
+                        setCode(newCode);
+                      }}
+                    />
+                  ))}
+                </div>
+                <PasswordField label="New Password" placeholder="8-20 characters" name="newPassword" visible={showPassword} onToggle={() => setShowPassword(!showPassword)} value={password} onChange={(e) => setPassword(e.target.value)} />
+                {error && <small style={{color:'red', display:'block', marginTop:'10px'}}>{error}</small>}
+                <button type="submit" className="button button-dark button-full" disabled={loading} style={{marginTop:'15px'}}>{loading ? 'Resetting...' : 'Reset Password'}</button>
+            </form>
+            <button className="back-button" onClick={onBack} style={{marginTop:'20px'}}>Back to login</button>
+        </div>
+    );
+}
+
+function VerificationPanel({ onBack, userEmail, userName }) {
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [code, setCode] = useState(Array(6).fill(""));
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleVerify = async () => {
+    const otpCode = code.join("");
+    if (otpCode.length < 6) {
+      setError("Please enter all 6 digits.");
+      return;
+    }
+    try {
+      await apiFetch("/auth/otp/verify", {
+        method: "POST",
+        body: JSON.stringify({ email: userEmail, code: otpCode })
+      });
+      setMessage("Email verified successfully. You can now log in.");
+      setTimeout(() => {
+        onBack();
+      }, 2000);
+    } catch (err) {
+      setError(err.message || "Invalid OTP");
+    }
+  };
+
+  const handleResend = async () => {
+    try {
+      await apiFetch("/auth/otp/send", { method: "POST", body: JSON.stringify({ email: userEmail }) });
+      setMessage("A new verification code was sent.");
+      setError("");
+    } catch (err) {
+      setError("Failed to resend code.");
+    }
+  };
 
   return (
     <div className="verification-panel">
-      <p className="verification-icon" aria-hidden="true">
-        ▣
-      </p>
       <p className="eyebrow">Verify your email</p>
       <h1>One last step.</h1>
       <p className="muted">
-        We've sent a code to your email: <strong>user@example.com</strong>
+        We've sent a code to your email: <strong>{userEmail}</strong>
       </p>
       <div className="code-inputs">
-        {Array.from({ length: 6 }, (_, index) => (
+        {code.map((digit, index) => (
           <input
             key={index}
             maxLength="1"
             inputMode="numeric"
+            value={digit}
+            onChange={(e) => {
+              const newCode = [...code];
+              newCode[index] = e.target.value;
+              setCode(newCode);
+            }}
             aria-label={`Verification digit ${index + 1}`}
           />
         ))}
       </div>
+      {error && <small className="auth-error verification-message" style={{color: 'red'}}>{error}</small>}
+      {message && <small className="auth-success verification-message">{message}</small>}
       <button
         className="button button-dark button-full"
-        onClick={() => setMessage("Email verified successfully.")}
+        onClick={handleVerify}
       >
         Verify &amp; continue
       </button>
       <p className="verification-help">
         Didn't receive the code?{" "}
-        <button onClick={() => setMessage("A new verification code was sent.")}>
+        <button type="button" onClick={handleResend}>
           Resend code
         </button>
       </p>
-      {message && (
-        <small className="auth-success verification-message">{message}</small>
-      )}
+      
       <button className="back-button" onClick={onBack}>
         Back to sign up
       </button>

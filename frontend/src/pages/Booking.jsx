@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import VenueFilters from "../components/VenueFilters";
 import VenueListingCard from "../components/VenueListingCard";
-import { venues } from "../data/venues";
+import { apiFetch } from "../services/api";
 
 const initialFilters = {
   search: "",
@@ -20,21 +20,44 @@ const initialFilters = {
 export default function Booking() {
   const [filters, setFilters] = useState(initialFilters);
   const [sortBy, setSortBy] = useState("Recommended");
+  const [apiVenues, setApiVenues] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchVenues = async () => {
+      try {
+        setLoading(true);
+        const data = await apiFetch("/venues");
+        setApiVenues(Array.isArray(data) ? data : []);
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+        setApiVenues([]); 
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchVenues();
+  }, []);
+
   const updateFilter = (name, value) =>
     setFilters((current) => ({ ...current, [name]: value }));
-  const filteredVenues = venues.filter((venue) => {
+  const filteredVenues = apiVenues.filter((venue) => {
     const matchesSearch = venue.name
-      .toLowerCase()
+      ?.toLowerCase()
       .includes(filters.search.toLowerCase());
     const matchesSport =
-      filters.sport === "All sports" || venue.type === filters.sport;
+      filters.sport === "All sports" || (venue.sports && venue.sports.includes(filters.sport));
     const matchesPrice =
-      Number(venue.price) >= Number(filters.minPrice || 0) &&
-      Number(venue.price) <= Number(filters.maxPrice || 5000);
+      Number(venue.startingPrice || 0) >= Number(filters.minPrice || 0) &&
+      Number(venue.startingPrice || 0) <= Number(filters.maxPrice || 5000);
+    const isIndoor = venue.venueType?.toLowerCase().includes("indoor");
+    const isOutdoor = venue.venueType?.toLowerCase().includes("outdoor");
     const matchesType =
       (!filters.indoor && !filters.outdoor) ||
-      (filters.indoor && !venue.outdoor) ||
-      (filters.outdoor && venue.outdoor);
+      (filters.indoor && isIndoor) ||
+      (filters.outdoor && isOutdoor);
     const ratingFilters = [
       filters.highRating && 4.5,
       filters.fourRating && 4,
@@ -56,7 +79,7 @@ export default function Booking() {
   });
   const visibleVenues = [...filteredVenues].sort((firstVenue, secondVenue) => {
     if (sortBy === "Price: low to high")
-      return Number(firstVenue.price) - Number(secondVenue.price);
+      return Number(firstVenue.startingPrice) - Number(secondVenue.startingPrice);
     if (sortBy === "Rating")
       return Number(secondVenue.rating) - Number(firstVenue.rating);
     return 0;
@@ -81,6 +104,9 @@ export default function Booking() {
           onClear={() => setFilters(initialFilters)}
         />
         <section className="venue-results">
+          {loading && <p style={{margin: '20px 0'}}>Loading venues from backend...</p>}
+          {error && <p style={{color: 'red', margin: '20px 0'}}>Failed to load venues: {error}</p>}
+          
           <div className="results-toolbar">
             <span>{visibleVenues.length} venues found</span>
             <select
@@ -93,13 +119,14 @@ export default function Booking() {
               <option>Rating</option>
             </select>
           </div>
-          {visibleVenues.length > 0 ? (
+          
+          {!loading && !error && visibleVenues.length > 0 ? (
             <div className="listing-grid">
               {visibleVenues.map((venue) => (
-                <VenueListingCard venue={venue} key={venue.id} />
+                <VenueListingCard venue={venue} key={venue.id || venue.name} />
               ))}
             </div>
-          ) : (
+          ) : !loading && !error ? (
             <div className="empty-results">
               <h2>No venues found</h2>
               <p>Try clearing a filter or searching for another sport.</p>
@@ -110,7 +137,8 @@ export default function Booking() {
                 Clear filters
               </button>
             </div>
-          )}
+          ) : null}
+          
           <nav className="pagination" aria-label="Venue pages">
             <button aria-label="Previous page">&lt;</button>
             <button className="current-page">1</button>

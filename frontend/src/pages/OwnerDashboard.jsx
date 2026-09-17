@@ -1,4 +1,4 @@
-﻿import OwnerSidebar from "../components/OwnerSidebar";
+import OwnerSidebar from "../components/OwnerSidebar";
 import { useState, useEffect } from "react";
 import { apiFetch } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -48,7 +48,7 @@ export default function OwnerDashboard() {
             </div>
             <div style={{ padding: '20px', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #eee' }}>
               <h3 style={{ margin: '0 0 10px', fontSize: '14px', color: '#666' }}>Monthly Earnings</h3>
-              <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold' }}>?{stats.monthlyEarnings || '0.00'}</p>
+              <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold' }}>INR {stats.monthlyEarnings || '0.00'}</p>
             </div>
           </div>
         )}
@@ -56,3 +56,4 @@ export default function OwnerDashboard() {
     </main>
   );
 }
+

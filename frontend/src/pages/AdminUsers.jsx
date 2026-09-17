@@ -1,16 +1,19 @@
-﻿import AdminSidebar from "../components/AdminSidebar";
+import AdminSidebar from "../components/AdminSidebar";
 import { useState, useEffect } from "react";
 import { apiFetch } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { user } = useAuth();
 
   const fetchUsers = async () => {
+    if (!user) return;
     try {
       setLoading(true);
-      const data = await apiFetch("/users");
+      const data = await apiFetch(`/admin/users?adminId=${user.id}`);
       setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message);
@@ -21,11 +24,11 @@ export default function AdminUsers() {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [user]);
 
   const handleAction = async (userId, action) => {
     try {
-      await apiFetch(`/users/${userId}/${action}`, { method: 'PUT' });
+      await apiFetch(`/admin/users/${userId}/${action}?adminId=${user.id}`, { method: 'PUT' });
       fetchUsers();
     } catch (err) {
       alert(`Failed to ${action} user: ` + err.message);

@@ -76,7 +76,7 @@ export default function Home() {
           </Link>
         </div>
         <div className="footer-bottom">
-          <span>© 2026 QuickCourt</span>
+          <span>Â© 2026 QuickCourt</span>
           <span>Made for people who play</span>
           <Link to="/booking">
             Find a venue <span aria-hidden="true">-&gt;</span>
@@ -87,3 +87,4 @@ export default function Home() {
     </main>
   );
 }
+

@@ -9,6 +9,7 @@ import LogSign from "./pages/LogSign";
 import Navbar from "./pages/Navbar";
 import Profile from "./pages/Profile";
 import Bookings from "./pages/Bookings";
+import Matches from "./pages/Matches";
 
 function App() {
   return (
@@ -23,9 +24,11 @@ function App() {
         <Route path="/logsign" element={<LogSign />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/bookings" element={<Bookings />} />
+        <Route path="/matches" element={<Matches />} />
       </Routes>
     </div>
   );
 }
 
 export default App;
+

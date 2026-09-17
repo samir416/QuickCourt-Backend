@@ -1,4 +1,4 @@
-﻿import AdminSidebar from "../components/AdminSidebar";
+import AdminSidebar from "../components/AdminSidebar";
 import { useState, useEffect } from "react";
 import { apiFetch } from "../services/api";
 
