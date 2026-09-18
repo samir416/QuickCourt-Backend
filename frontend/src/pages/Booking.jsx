@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import VenueFilters from "../components/VenueFilters";
 import VenueListingCard from "../components/VenueListingCard";
@@ -43,14 +43,16 @@ export default function Booking() {
     fetchVenues();
   }, []);
 
-  const updateFilter = (name, value) =>
-    setFilters((current) => ({ ...current, [name]: value }));
+  const updateFilter = (name, value) => { setFilters((current) => ({ ...current, [name]: value })); setCurrentPage(1); };
+  
+  const availableSports = Array.from(new Set(apiVenues.flatMap(v => (v.sports || "").split(',')).map(s => s.trim().toLowerCase()).filter(Boolean)));
+
   const filteredVenues = apiVenues.filter((venue) => {
     const matchesSearch = venue.name
       ?.toLowerCase()
       .includes(filters.search.toLowerCase());
     const matchesSport =
-      filters.sport === "All sports" || (venue.sports && venue.sports.includes(filters.sport));
+      filters.sport === "All sports" || (venue.sports && venue.sports.toLowerCase().includes(filters.sport.toLowerCase()));
     const matchesPrice =
       Number(venue.startingPrice || 0) >= Number(filters.minPrice || 0) &&
       Number(venue.startingPrice || 0) <= Number(filters.maxPrice || 5000);
@@ -69,7 +71,7 @@ export default function Booking() {
     const matchesRating =
       ratingFilters.length === 0 ||
       ratingFilters.some(
-        (minimumRating) => Number(venue.rating) >= minimumRating,
+        (minimumRating) => Number(venue.rating || 0) >= minimumRating,
       );
     return (
       matchesSearch &&
@@ -79,11 +81,12 @@ export default function Booking() {
       matchesRating
     );
   });
+  
   const visibleVenues = [...filteredVenues].sort((firstVenue, secondVenue) => {
     if (sortBy === "Price: low to high")
-      return Number(firstVenue.startingPrice) - Number(secondVenue.startingPrice);
+      return Number(firstVenue.startingPrice || 0) - Number(secondVenue.startingPrice || 0);
     if (sortBy === "Rating")
-      return Number(secondVenue.rating) - Number(firstVenue.rating);
+      return Number(secondVenue.rating || 0) - Number(firstVenue.rating || 0);
     return 0;
   });
 
@@ -103,7 +106,8 @@ export default function Booking() {
         <VenueFilters
           filters={filters}
           onChange={updateFilter}
-          onClear={() => setFilters(initialFilters)}
+          onClear={() => { setFilters(initialFilters); setCurrentPage(1); }}
+          availableSports={availableSports}
         />
         <section className="venue-results">
           {loading && <p style={{margin: '20px 0'}}>Loading venues from backend...</p>}
@@ -114,7 +118,7 @@ export default function Booking() {
             <select
               aria-label="Sort venues"
               value={sortBy}
-              onChange={(event) => setSortBy(event.target.value)}
+              onChange={(event) => { setSortBy(event.target.value); setCurrentPage(1); }}
             >
               <option>Recommended</option>
               <option>Price: low to high</option>
@@ -134,7 +138,7 @@ export default function Booking() {
               <p>Try clearing a filter or searching for another sport.</p>
               <button
                 className="button button-dark"
-                onClick={() => setFilters(initialFilters)}
+                onClick={() => { setFilters(initialFilters); setCurrentPage(1); }}
               >
                 Clear filters
               </button>
@@ -158,6 +162,3 @@ export default function Booking() {
     </main>
   );
 }
-
-
-

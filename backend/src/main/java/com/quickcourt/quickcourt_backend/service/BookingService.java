@@ -84,7 +84,7 @@ public class BookingService {
                 .durationHours(durationHours)
                 .endTime(endTime)
                 .totalPrice(totalPrice)
-                .status(Booking.BookingStatus.CONFIRMED)
+                .status(Booking.BookingStatus.PENDING)
                 .paymentStatus(Booking.PaymentStatus.PENDING)
                 .build();
 

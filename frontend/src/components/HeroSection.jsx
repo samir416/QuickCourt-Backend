@@ -1,18 +1,22 @@
 import SearchPanel from "./SearchPanel";
 
-export default function HeroSection({ sport, onSportChange }) {
+export default function HeroSection({ sport, onSportChange, userName, popularSports = [] }) {
   return (
     <section className="hero-section">
       <div className="hero-copy">
         <p className="eyebrow">Ahmedabad / play locally</p>
         <h1>
-          Find your next <em>game.</em>
+          {userName ? (
+             <>Welcome back, <em>{userName}.</em></>
+          ) : (
+             <>Find your next <em>game.</em></>
+          )}
         </h1>
         <p className="hero-intro">
           Book great courts, meet sports enthusiasts, and make time for the
           games you keep talking about.
         </p>
-        <SearchPanel sport={sport} onSportChange={onSportChange} />
+        <SearchPanel sport={sport} onSportChange={onSportChange} popularSports={popularSports} />
       </div>
       <div className="hero-art">
         <img

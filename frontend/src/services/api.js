@@ -8,7 +8,20 @@ export const apiFetch = async (endpoint, options = {}) => {
   const defaultHeaders = {
     "Content-Type": "application/json",
   };
-  
+
+  // Attach token for authentication if available
+  const storedUser = localStorage.getItem("qc_user");
+  if (storedUser) {
+    try {
+      const user = JSON.parse(storedUser);
+      if (user && user.token) {
+        defaultHeaders["Authorization"] = `Bearer ${user.token}`;
+      }
+    } catch (e) {
+      console.error("Failed to parse user session for token", e);
+    }
+  }
+
   try {
     const response = await fetch(url, {
       ...options,

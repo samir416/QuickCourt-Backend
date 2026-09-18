@@ -36,7 +36,7 @@ export default function Bookings() {
 
   const handleCancelBooking = async (bookingId) => {
     try {
-      await apiFetch("/bookings/" + bookingId + "/cancel", { method: "PUT" });
+      await apiFetch("/bookings/" + bookingId + "/cancel?userId=" + user.id, { method: "PUT" });
       const data = await apiFetch("/bookings/user/" + user.id);
       setApiBookings(Array.isArray(data) ? data : []);
     } catch(err) {
@@ -54,7 +54,7 @@ export default function Bookings() {
   const cancelCount = apiBookings.filter(b => b.status === "CANCELLED").length;
 
   return (
-    <main className="account-page bookings-wireframe-page">
+    <main className="account-page">
       <AccountSidebar active="bookings" />
       <section className="account-content">
         <div className="bookings-header">
@@ -164,3 +164,4 @@ export default function Bookings() {
     </main>
   );
 }
+

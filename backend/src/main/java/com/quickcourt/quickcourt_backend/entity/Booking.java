@@ -45,7 +45,7 @@ public class Booking {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private BookingStatus status = BookingStatus.CONFIRMED;
+    private BookingStatus status = BookingStatus.PENDING;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -77,6 +77,7 @@ public class Booking {
     }
 
     public enum BookingStatus {
+        PENDING,
         CONFIRMED,
         CANCELLED,
         COMPLETED

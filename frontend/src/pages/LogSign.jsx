@@ -10,7 +10,7 @@ export default function LogSign() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [emailError, setEmailError] = useState("");
-  const [imageError, setImageError] = useState("");
+  
   const [resetMessage, setResetMessage] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
@@ -35,7 +35,7 @@ export default function LogSign() {
     setUserEmail(email);
     if (fullName) setUserName(fullName);
 
-    if (imageError) return;
+    
     setIsSubmitting(true);
 
     if (mode === "login") {
@@ -82,22 +82,14 @@ export default function LogSign() {
     }
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file && file.size > 2 * 1024 * 1024) {
-      setImageError("File size should not exceed 2MB");
-      e.target.value = "";
-    } else {
-      setImageError("");
-    }
-  };
+  
 
   const switchMode = (nextMode) => {
     setMode(nextMode);
     setStage("form");
     setPasswordError("");
     setEmailError("");
-    setImageError("");
+    
     setResetMessage("");
     setFormError("");
   };
@@ -181,18 +173,7 @@ export default function LogSign() {
                 )}
               {mode === "signup" && (
                 <>
-                  <label className="field-label profile-picture-field">
-                    Profile Picture
-                    <input
-                      name="profilePicture"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                    />
-                    {imageError && (
-                      <small className="auth-error">{imageError}</small>
-                    )}
-                  </label>
+                  
                   <label className="field-label">
                     Sign up as
                     <select name="roleType" defaultValue="Player">
@@ -469,7 +450,32 @@ function VerificationPanel({ onBack, userEmail, userName }) {
 function OTPInput({ code, setCode }) {
   const otpRefs = useRef([]);
   return (
-    <OTPInput code={code} setCode={setCode} />
+    <div className="otp-container" style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '20px' }}>
+      {code.map((digit, index) => (
+        <input
+          key={index}
+          type="text"
+          maxLength={1}
+          value={digit}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (!/^[0-9]?$/.test(val)) return;
+            const newCode = [...code];
+            newCode[index] = val;
+            setCode(newCode);
+            if (val && index < 5) otpRefs.current[index + 1]?.focus();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Backspace" && !code[index] && index > 0) {
+              otpRefs.current[index - 1]?.focus();
+            }
+          }}
+          ref={(el) => (otpRefs.current[index] = el)}
+          className="otp-input"
+          style={{ width: '40px', height: '50px', fontSize: '24px', textAlign: 'center', borderRadius: '8px', border: '1px solid #ccc' }}
+        />
+      ))}
+    </div>
   );
 }
 

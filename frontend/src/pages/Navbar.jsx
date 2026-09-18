@@ -16,7 +16,7 @@ export default function Navbar() {
   };
 
   useEffect(() => {
-    if (navRef.current) {
+    if (navRef.current && !menuOpen) {
       const activeElement = navRef.current.querySelector("a.active");
       if (activeElement) {
         setIndicatorStyle({
@@ -28,6 +28,7 @@ export default function Navbar() {
         setIndicatorStyle((prev) => ({ ...prev, opacity: 0 }));
       }
     }
+    setMenuOpen(false);
   }, [location.pathname, user]);
 
   return (
@@ -68,12 +69,32 @@ export default function Navbar() {
         )}
         
         {user && (user.role === 'OWNER' || user.role === 'FACILITY_OWNER') && (
-          <NavLink to="/owner/dashboard">Owner Dashboard</NavLink>
+          <>
+            <NavLink to="/owner/dashboard">Dashboard</NavLink>
+            <NavLink to="/owner/facilities">Facilities</NavLink>
+            <NavLink to="/owner/courts">Courts</NavLink>
+            <NavLink to="/owner/bookings">Bookings</NavLink>
+          </>
         )}
         
         {user && user.role === 'ADMIN' && (
-          <NavLink to="/admin/dashboard">Admin Dashboard</NavLink>
+          <>
+            <NavLink to="/admin/dashboard">Dashboard</NavLink>
+            <NavLink to="/admin/approvals">Approvals</NavLink>
+            <NavLink to="/admin/users">Users</NavLink>
+          </>
         )}
+
+        <div className="mobile-only-nav">
+            {user ? (
+              <>
+                <NavLink to={user.role === 'OWNER' || user.role === 'FACILITY_OWNER' ? "/owner/profile" : user.role === 'ADMIN' ? "/admin/profile" : "/profile"}>Profile</NavLink>
+                <Link to="/" onClick={(e) => { e.preventDefault(); handleLogout(); }}>Log out</Link>
+              </>
+            ) : (
+              <Link to="/logsign">Log in / Sign up</Link>
+            )}
+        </div>
       </nav>
       <div className="header-actions">
         {user ? (
@@ -91,17 +112,16 @@ export default function Navbar() {
             Log in / Sign up
           </Link>
         )}
-      </div>
-      <button
-        className="mobile-menu-toggle"
+        <button
+          className="mobile-menu-toggle"
         type="button"
         aria-label={menuOpen ? "Close navigation" : "Open navigation"}
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((current) => !current)}
       >
-        {menuOpen ? "X" : "Menu"}
-      </button>
+          {menuOpen ? "X" : "Menu"}
+        </button>
+      </div>
     </header>
   );
 }
-

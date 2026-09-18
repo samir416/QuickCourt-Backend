@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function AccountSidebar({ active }) {
@@ -8,8 +8,6 @@ export default function AccountSidebar({ active }) {
       <span className="avatar avatar-large">{user && user.name ? user.name.substring(0,2).toUpperCase() : "MA"}</span>
       <h1>{user ? user.name : "Player"}</h1>
       <p>
-        9999999999
-        <br />
         {user ? user.email : "user@example.com"}
       </p>
       <nav>

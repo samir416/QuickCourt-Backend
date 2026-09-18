@@ -1,7 +1,8 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiFetch } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { ArrowLeft, User, MapPin, Star, Clock, CheckCircle, Info, Calendar } from 'lucide-react';
 
 export default function CourtDetail() {
   const { venueId } = useParams();
@@ -9,18 +10,16 @@ export default function CourtDetail() {
   const [venue, setVenue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-    const [reviews, setReviews] = useState([]);
-  const [rating, setRating] = useState(0);
+  const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
     const fetchVenue = async () => {
       try {
         setLoading(true);
         const data = await apiFetch("/venues/" + venueId);
-          const reviewsData = await apiFetch("/venues/" + venueId + "/reviews").catch(() => []);
-          setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+        const reviewsData = await apiFetch("/reviews/venue/" + venueId).catch(() => []);
+        setReviews(Array.isArray(reviewsData) ? reviewsData : []);
         setVenue(data);
-        setRating(data.rating || 4);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -34,27 +33,20 @@ export default function CourtDetail() {
   if (error) return <main className="home-page"><p style={{padding:'20px', color:'red'}}>{error}</p></main>;
   if (!venue) return <main className="home-page"><p style={{padding:'20px'}}>Venue not found.</p></main>;
 
+  const parseStringArray = (data) => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (typeof data === 'string') return data.split(',').map(s => s.trim()).filter(Boolean);
+    return [];
+  };
+  
+  const normalizedSports = parseStringArray(venue.sports);
+  const normalizedAmenities = parseStringArray(venue.amenities);
+  const hasReviews = venue.rating && venue.rating > 0 && venue.totalReviews > 0;
+
   return (
     <main className="home-page">
-      <header className="site-header detail-header">
-        <Link className="brand" to="/">
-          <span className="brand-mark">Q</span>
-          <span>quickcourt</span>
-        </Link>
-        <nav className="site-nav">
-          <Link to="/">Home</Link>
-          <Link to="/booking" className="active">
-            Ã¢Å¡Â¡ Book
-          </Link>
-          {user ? (
-             <Link to="/profile" className="profile-link">Ã°Å¸â€˜Â¤ {user.name}</Link>
-          ) : (
-             <Link to="/logsign" className="header-login">
-               Ã°Å¸â€˜Â¤ Log in / Sign up
-             </Link>
-          )}
-        </nav>
-      </header>
+      
       <div className="detail-gallery">
         <img
           src={venue.photos && venue.photos.length > 0 ? venue.photos[0] : "https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=1200&q=80"}
@@ -67,25 +59,32 @@ export default function CourtDetail() {
             <div>
               <h1>{venue.name}</h1>
               <p className="detail-location">
-                <span>Ã°Å¸â€œÂ {venue.location}</span>
-                <span className="detail-rating">
-                  Ã¢Ëœâ€¦ {venue.rating || "New"}
+                <span><MapPin size={16} style={{marginRight: '4px', verticalAlign: 'text-bottom'}} /> {venue.city || venue.address || venue.location}</span>
+                <span className="detail-rating" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                  {hasReviews ? (
+                    <>
+                       <Star size={16} fill="currentColor" style={{marginRight: '4px', color: '#ffc107'}} /> 
+                       {Number(venue.rating).toFixed(1)} <small style={{marginLeft: '4px', color: '#666'}}>({venue.totalReviews} reviews)</small>
+                    </>
+                  ) : (
+                       <span style={{ fontSize: '13px', color: '#666' }}>No reviews yet</span>
+                  )}
                 </span>
               </p>
             </div>
           </div>
           <div className="detail-mobile-action">
             <Link
-              to={"/booking/" + venue.id}
+              to={"/booking/" + venue.id + "/reserve"}
               className="button button-dark button-full"
             >
-              Ã¢Å¡Â¡ Book This Venue
+              Book This Venue
             </Link>
           </div>
           <div className="detail-section">
             <h2>Sports</h2>
             <div className="sports-options">
-              {venue.sports ? venue.sports.map(s => (
+              {normalizedSports.length > 0 ? normalizedSports.map(s => (
                   <span key={s} className="sport-pill">{s}</span>
               )) : <span className="sport-pill">Multi-sport</span>}
             </div>
@@ -98,24 +97,24 @@ export default function CourtDetail() {
           </div>
           <div className="detail-grid-section">
             <div className="detail-box">
-              <h2>Ã°Å¸â€¢â€™ Operating Hours</h2>
+              <h2><Clock size={20} style={{marginRight: '8px', verticalAlign: 'text-bottom'}} /> Operating Hours</h2>
               <p>Mon - Sun: 06:00 AM - 11:00 PM</p>
             </div>
             <div className="detail-box">
-              <h2>Ã°Å¸â€œÂ Address</h2>
-              <p>{venue.location}</p>
+              <h2><MapPin size={20} style={{marginRight: '8px', verticalAlign: 'text-bottom'}} /> Address</h2>
+              <p>{venue.address || venue.city || venue.location}</p>
             </div>
           </div>
           <div className="detail-section">
             <h2>Amenities</h2>
             <div className="amenities-grid">
-              {venue.amenities ? venue.amenities.map(amenity => (
-                <span key={amenity}>Ã¢Å“â€œ {amenity}</span>
+              {normalizedAmenities.length > 0 ? normalizedAmenities.map(amenity => (
+                <span key={amenity}><CheckCircle size={16} style={{marginRight: '4px', verticalAlign: 'text-bottom'}} /> {amenity}</span>
               )) : (
                  <>
-                   <span>Ã¢Å“â€œ Parking</span>
-                   <span>Ã¢Å“â€œ Changing Rooms</span>
-                   <span>Ã¢Å“â€œ Drinking Water</span>
+                   <span><CheckCircle size={16} style={{marginRight: '4px', verticalAlign: 'text-bottom'}} /> Parking</span>
+                   <span><CheckCircle size={16} style={{marginRight: '4px', verticalAlign: 'text-bottom'}} /> Changing Rooms</span>
+                   <span><CheckCircle size={16} style={{marginRight: '4px', verticalAlign: 'text-bottom'}} /> Drinking Water</span>
                  </>
               )}
             </div>
@@ -130,16 +129,16 @@ export default function CourtDetail() {
         <div className="detail-sidebar">
           <div className="booking-widget">
             <div className="widget-price">
-              <strong>Starting from INR {venue.startingPrice}</strong>
+              <strong>Starting from INR {venue.startingPrice || venue.price}</strong>
               <span>/ hour</span>
             </div>
             <div className="widget-rules">
-              <p>Ã¢â‚¬Â¢ Tournament Training Venue</p>
-              <p>Ã¢â‚¬Â¢ For more than 2 players, INR 50 extra per person</p>
-              <p>Ã¢â‚¬Â¢ Equipment available on rent</p>
+              <p><Info size={16} style={{marginRight: '8px', verticalAlign: 'text-bottom'}} /> Tournament Training Venue</p>
+              <p><Info size={16} style={{marginRight: '8px', verticalAlign: 'text-bottom'}} /> For more than 2 players, INR 50 extra per person</p>
+              <p><Info size={16} style={{marginRight: '8px', verticalAlign: 'text-bottom'}} /> Equipment available on rent</p>
             </div>
             <Link
-              to={"/booking/" + venue.id}
+              to={"/booking/" + venue.id + "/reserve"}
               className="button button-dark button-full"
             >
               Check Availability
@@ -152,19 +151,16 @@ export default function CourtDetail() {
 }
 
 function ReviewItem({ name, date, text, rating }) {
-  const stars = "Ã¢Ëœâ€¦".repeat(Math.round(rating || 5));
   return (
     <div className="review-item">
       <div className="review-header">
         <div className="review-avatar">{name.charAt(0)}</div>
         <div className="review-meta">
-          <strong>{name} <span style={{color: '#ffc107'}}>{stars}</span></strong>
-          <time>Ã°Å¸â€œâ€¦ {date}</time>
+          <strong>{name} <span style={{color: '#ffc107', marginLeft: '4px'}}><Star size={14} fill="currentColor" style={{verticalAlign: 'text-bottom'}}/> {rating}</span></strong>
+          <time><Calendar size={14} style={{marginRight: '4px', verticalAlign: 'text-bottom'}} /> {date}</time>
         </div>
       </div>
       <p>{text}</p>
     </div>
   );
 }
-
-

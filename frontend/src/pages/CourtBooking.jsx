@@ -1,7 +1,8 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { ArrowLeft, MapPin, Star } from "lucide-react";
 
 export default function CourtBooking() {
   const { venueId } = useParams();
@@ -61,7 +62,7 @@ export default function CourtBooking() {
       setIsSubmitting(true);
       setSubmitError("");
       const payload = {
-        playerId: user.id,
+        userId: user.id,
         courtId: Number(court),
         bookingDate: date,
         startTime: time,
@@ -72,7 +73,7 @@ export default function CourtBooking() {
         body: JSON.stringify(payload)
       });
       if (bookingData && bookingData.id) {
-         await apiFetch("/bookings/" + bookingData.id + "/payment", { method: "POST" });
+         await apiFetch("/bookings/payment", { method: "POST", body: JSON.stringify({ bookingId: bookingData.id }) });
       }
       navigate("/bookings");
     } catch (err) {
@@ -89,19 +90,15 @@ export default function CourtBooking() {
   return (
     <main className="court-booking-page">
       <div className="court-booking-shell">
-        <div className="court-booking-topbar">
-          <Link to="/">quickcourt</Link>
-          <Link to="/booking">âš¡ Book</Link>
-          <Link to={user ? "/profile" : "/logsign"}>{user ? user.name : "Log in"}</Link>
-        </div>
+        
         <div className="court-booking-content">
           <p className="eyebrow">Venue booking page</p>
           <h1>Court Booking</h1>
           <section className="court-booking-card">
             <h2>{venue.name}</h2>
             <div className="court-booking-meta">
-              <span>ðŸ“ {venue.location}</span>
-              <span>â˜… {venue.rating || "4.5"} ({venue.reviews || 6})</span>
+              <span><MapPin size={16} style={{marginRight: '4px', verticalAlign: 'text-bottom'}} /> {venue.city || venue.address || venue.location}</span>
+              <span><Star size={16} fill="currentColor" style={{marginRight: '4px', verticalAlign: 'text-bottom', color: '#ffc107'}} /> {venue.rating || "New"} ({venue.totalReviews || venue.reviews || 0})</span>
             </div>
             
             <div className="court-booking-form">
@@ -165,5 +162,3 @@ export default function CourtBooking() {
     </main>
   );
 }
-
-

@@ -8,14 +8,18 @@ import com.quickcourt.quickcourt_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.quickcourt.quickcourt_backend.security.JwtService;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final OtpService otpService;
+    private final JwtService jwtService;
 
     public AuthResponse register(AuthRequest request) {
         String email = request.getEmail().toLowerCase().trim();
@@ -85,8 +89,11 @@ public class AuthService {
         if (!user.getEmailVerified()) {
             throw new RuntimeException("Please verify your email before login");
         }
+        
+        String jwtToken = jwtService.generateToken(user, user.getId(), user.getRole().name());
 
         return AuthResponse.builder()
+                .token(jwtToken)
                 .userId(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
@@ -108,6 +115,7 @@ public class AuthService {
             throw new RuntimeException("Invalid role");
         }
     }
+    
     public AuthResponse resetPassword(String email, String otp, String newPassword) {
         otpService.verifyOtp(email, otp);
         User user = userRepository.findByEmail(email.toLowerCase().trim())

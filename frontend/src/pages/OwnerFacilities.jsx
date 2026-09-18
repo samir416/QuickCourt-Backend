@@ -1,4 +1,4 @@
-﻿import OwnerSidebar from "../components/OwnerSidebar";
+import OwnerSidebar from "../components/OwnerSidebar";
 import { useState, useEffect, useRef } from "react";
 import { apiFetch, API_BASE_URL } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -40,7 +40,7 @@ export default function OwnerFacilities() {
 
   const handleDelete = async (venueId) => {
     try {
-      await apiFetch("/venues/" + venueId, { method: 'DELETE' });
+      await apiFetch("/venues/" + venueId + "?ownerId=" + user.id, { method: 'DELETE' });
       fetchFacilities();
     } catch (err) {
       alert("Failed to delete venue: " + err.message);

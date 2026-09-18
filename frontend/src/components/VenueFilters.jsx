@@ -1,4 +1,9 @@
-export default function VenueFilters({ filters, onChange, onClear }) {
+export default function VenueFilters({ filters, onChange, onClear, availableSports = [] }) {
+  const allSports = Array.from(new Set([
+    "Badminton", "Football", "Tennis", 
+    ...availableSports.map(s => s.charAt(0).toUpperCase() + s.slice(1))
+  ]));
+
   return (
     <aside className="venue-filters">
       <div className="filter-heading">
@@ -19,10 +24,10 @@ export default function VenueFilters({ filters, onChange, onClear }) {
           value={filters.sport}
           onChange={(event) => onChange("sport", event.target.value)}
         >
-          <option>All sports</option>
-          <option>Badminton</option>
-          <option>Football</option>
-          <option>Tennis</option>
+          <option value="All sports">All sports</option>
+          {allSports.map(s => (
+            <option key={s} value={s}>{s}</option>
+          ))}
         </select>
       </label>
       <fieldset>

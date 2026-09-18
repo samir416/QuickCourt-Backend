@@ -1,0 +1,4 @@
+INSERT INTO users (name, email, password, role, active, email_verified, created_at, updated_at) VALUES 
+('Temp Player 2', 'temp_player2@example.com', '$2a$10$zEFtc9WtudSXykKJYM3jjOSQRdQf5W2BmkyD357/e1oL3H2GOhCii', 'PLAYER', 1, 1, NOW(), NOW()),
+('Temp Owner 2', 'temp_owner2@example.com', '$2a$10$zEFtc9WtudSXykKJYM3jjOSQRdQf5W2BmkyD357/e1oL3H2GOhCii', 'FACILITY_OWNER', 1, 1, NOW(), NOW()),
+('Temp Admin 2', 'temp_admin2@example.com', '$2a$10$zEFtc9WtudSXykKJYM3jjOSQRdQf5W2BmkyD357/e1oL3H2GOhCii', 'ADMIN', 1, 1, NOW(), NOW());

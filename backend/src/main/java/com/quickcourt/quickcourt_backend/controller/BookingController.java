@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -39,6 +40,7 @@ public class BookingController {
         );
     }
 
+    @PreAuthorize("#userId == authentication.principal.id or hasRole('ADMIN')")
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<BookingResponse>> getUserBookings(
             @PathVariable Long userId) {
@@ -70,6 +72,7 @@ public class BookingController {
         );
     }
 
+    @PreAuthorize("#userId == authentication.principal.id or hasRole('ADMIN')")
     @PutMapping("/{id}/cancel")
     public ResponseEntity<BookingResponse> cancelBooking(
             @PathVariable Long id,

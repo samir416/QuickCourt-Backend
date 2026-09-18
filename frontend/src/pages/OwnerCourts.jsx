@@ -13,7 +13,7 @@ export default function OwnerCourts() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
-    venueId: '', name: '', sport: '', pricePerHour: ''
+    venueId: '', name: '', sport: '', pricePerHour: '', openingTime: '06:00', closingTime: '23:00'
   });
 
   // Time Slots State
@@ -43,7 +43,7 @@ export default function OwnerCourts() {
 
   const handleDelete = async (courtId) => {
     try {
-      await apiFetch("/courts/" + courtId, { method: 'DELETE' });
+      await apiFetch("/courts/" + courtId + "?ownerId=" + user.id, { method: 'DELETE' });
       fetchCourts();
     } catch (err) {
       alert("Failed to delete court: " + err.message);
@@ -53,7 +53,7 @@ export default function OwnerCourts() {
   const handleEdit = (c) => {
     setFormData({
       venueId: c.venueId || '',
-      name: c.name || c.courtName || '',
+      name: c.name || c.courtName || '', openingTime: c.openingTime || '06:00', closingTime: c.closingTime || '23:00',
       sport: c.sport || '',
       pricePerHour: c.pricePerHour || ''
     });
@@ -62,7 +62,7 @@ export default function OwnerCourts() {
   };
   
   const resetForm = () => {
-    setFormData({ venueId: '', name: '', sport: '', pricePerHour: '' });
+    setFormData({ venueId: '', name: '', sport: '', pricePerHour: '', openingTime: '06:00', closingTime: '23:00' });
     setEditingId(null);
     setShowForm(false);
   };
@@ -75,7 +75,7 @@ export default function OwnerCourts() {
     }
     try {
       if (editingId) {
-        await apiFetch("/courts/" + editingId, {
+        await apiFetch("/courts/" + editingId + "?ownerId=" + user.id, {
           method: 'PUT',
           body: JSON.stringify(formData)
         });

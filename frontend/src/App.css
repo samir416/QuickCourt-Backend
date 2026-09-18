@@ -3343,3 +3343,8 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
     inset: 0;
     z-index: 5;
 }
+
+.field-label input, .field-label select { padding: 10px 12px; border: 1px solid #ccc; border-radius: 4px; display: block; width: 100%; margin-top: 6px; }
+.booking-field input, .booking-field select { padding: 10px 12px; }
+.mobile-only-nav { display: none; }
+@media (max-width: 800px) { .mobile-only-nav { display: contents; } }

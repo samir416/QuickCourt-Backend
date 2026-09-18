@@ -1,26 +1,60 @@
-﻿import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import HeroSection from "../components/HeroSection";
 import VenueCard from "../components/VenueCard";
 import PopularSports from "../components/PopularSports";
 import BackToTop from "../components/BackToTop";
 import { apiFetch } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function Home() {
   const [sport, setSport] = useState("All sports");
   const [apiVenues, setApiVenues] = useState([]);
+  const [popularSports, setPopularSports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchVenues = async () => {
+    const fetchHomeData = async () => {
       try {
-        const data = await apiFetch('/venues?size=4');
-        setApiVenues(data.content || []);
+        setLoading(true);
+        const data = await apiFetch('/home');
+        setApiVenues(data.popularVenues || data.approvedVenues || []);
+        
+        const backendSports = data.popularSports || [];
+        if(backendSports.length > 0) {
+            setPopularSports(backendSports);
+        } else {
+            // Fallback if backend returned no sports
+            setPopularSports(["Badminton", "Football", "Tennis", "Cricket"]);
+        }
       } catch (err) {
         console.error("Failed to load venues for home", err);
+        setError("Failed to load popular venues. Please try again later.");
+      } finally {
+        setLoading(false);
       }
     };
-    fetchVenues();
+    fetchHomeData();
   }, []);
+
+  const getFallbackImage = (name, sportStr) => {
+    const lowerSport = (sportStr || "").toLowerCase();
+    const lowerName = (name || "").toLowerCase();
+    if (lowerName.includes("sbr")) return "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=900&q=85";
+    if (lowerName.includes("skyline")) return "https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=900&q=85";
+    if (lowerName.includes("turf")) return "https://images.unsplash.com/photo-1526232761682-d26e03ac148e?auto=format&fit=crop&w=900&q=85";
+    if (lowerName.includes("ace")) return "https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=900&q=85";
+    if (lowerName.includes("smash")) return "https://images.unsplash.com/photo-1611251135345-18c56206b863?auto=format&fit=crop&w=900&q=85";
+    if (lowerName.includes("green")) return "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?auto=format&fit=crop&w=900&q=85";
+    
+    if (lowerSport.includes("badminton")) return "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=900&q=85";
+    if (lowerSport.includes("football") || lowerSport.includes("turf")) return "https://images.unsplash.com/photo-1526232761682-d26e03ac148e?auto=format&fit=crop&w=900&q=85";
+    if (lowerSport.includes("tennis")) return "https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=900&q=85";
+    return "https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=900&q=80";
+  };
 
   const filteredVenues = sport === "All sports" 
     ? apiVenues 
@@ -32,13 +66,21 @@ export default function Home() {
     type: v.venueType || 'Sports',
     location: v.city || v.address,
     price: v.startingPrice,
-    image: v.photos && v.photos.length > 0 ? v.photos[0] : "https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=600&q=80",
+    rating: v.rating,
+    image: v.photos && v.photos.length > 0 ? v.photos[0] : getFallbackImage(v.name, v.sports || v.venueType),
     alt: v.name
   }));
 
+  const handleSportSelect = (selectedSport) => {
+    setSport(selectedSport);
+    // Scroll to venues section
+    document.querySelector('.venue-section')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <main className="home-page">
-      <HeroSection sport={sport} onSportChange={setSport} />
+      <HeroSection sport={sport} onSportChange={setSport} userName={user?.name} popularSports={popularSports} />
+      
       <section className="venue-section">
         <div className="section-heading">
           <div>
@@ -49,13 +91,22 @@ export default function Home() {
             See all venues <span aria-hidden="true">-&gt;</span>
           </Link>
         </div>
-        <div className="venue-grid">
-          {mappedVenues.length > 0 ? mappedVenues.map((venue) => (
-            <VenueCard venue={venue} key={venue.id} />
-          )) : <p style={{gridColumn: "1 / -1", textAlign: "center"}}>No venues found.</p>}
-        </div>
+        
+        {loading ? (
+            <div style={{ textAlign: "center", padding: "40px" }}>Loading venues...</div>
+        ) : error ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "red" }}>{error}</div>
+        ) : (
+            <div className="venue-grid">
+              {mappedVenues.length > 0 ? mappedVenues.map((venue) => (
+                <VenueCard venue={venue} key={venue.id} onClick={() => navigate(`/court/${venue.id}`)} />
+              )) : <p style={{gridColumn: "1 / -1", textAlign: "center"}}>No venues found for the selected sport.</p>}
+            </div>
+        )}
       </section>
-      <PopularSports />
+
+      <PopularSports sports={popularSports} onSportSelect={handleSportSelect} />
+
       <section className="home-promo">
         <div>
           <p className="eyebrow">More than a booking</p>
@@ -89,7 +140,6 @@ export default function Home() {
           <h3>Account</h3>
           <Link to="/profile">Profile</Link>
           <Link to="/logsign">Log in / Sign up</Link>
-          <Link to="/booking">Saved venues</Link>
         </div>
         <div className="footer-column">
           <h3>Play locally</h3>

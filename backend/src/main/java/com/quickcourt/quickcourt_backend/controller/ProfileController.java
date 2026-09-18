@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/profile")
@@ -16,6 +17,7 @@ public class ProfileController {
 
     private final ProfileService profileService;
 
+    @PreAuthorize("#userId == authentication.principal.id or hasRole('ADMIN')")
     @GetMapping("/{userId}")
     public ResponseEntity<ProfileResponse> getProfile(
             @PathVariable Long userId) {
@@ -25,6 +27,7 @@ public class ProfileController {
         );
     }
 
+    @PreAuthorize("#userId == authentication.principal.id or hasRole('ADMIN')")
     @PutMapping("/{userId}")
     public ResponseEntity<ProfileResponse> updateProfile(
             @PathVariable Long userId,

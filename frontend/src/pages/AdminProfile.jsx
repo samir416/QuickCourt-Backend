@@ -7,24 +7,35 @@ export default function AdminProfile() {
   const { user, login } = useAuth();
   const [formData, setFormData] = useState({ name: "", email: "" });
   const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      setFormData({ name: user.name || "", email: user.email || "" });
-    }
+    const fetchProfile = async () => {
+      if (!user) return;
+      try {
+        setLoading(true);
+        const data = await apiFetch(`/profile/${user.id}`);
+        setFormData({ name: data.name || "", email: data.email || "" });
+      } catch (err) {
+        setStatus("Failed to load profile data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
   }, [user]);
 
   const handleSave = async () => {
     try {
       setStatus("Saving...");
-      await apiFetch("/profile/" + user.id, {
+      const data = await apiFetch("/profile/" + user.id, {
         method: "PUT",
         body: JSON.stringify(formData)
       });
-      login({ ...user, ...formData });
-      setStatus("Profile updated.");
+      login({ ...user, name: data.name, email: data.email });
+      setStatus("Profile updated successfully!");
     } catch (err) {
-      setStatus(err.message);
+      setStatus(err.message || "Failed to update profile.");
     }
   };
 
@@ -34,24 +45,28 @@ export default function AdminProfile() {
       <section className="account-content">
         <p className="eyebrow">Settings</p>
         <h2>Admin Profile</h2>
-        <div className="account-form">
-          <label className="field-label">
-            Full name
-            <input 
-              value={formData.name} 
-              onChange={e => setFormData({...formData, name: e.target.value})} 
-            />
-          </label>
-          <label className="field-label">
-            Email
-            <input 
-              value={formData.email} 
-              readOnly 
-            />
-          </label>
-          {status && <p style={{color: status.includes("Error") ? 'red' : 'green'}}>{status}</p>}
-          <button className="button button-dark" onClick={handleSave}>Save changes</button>
-        </div>
+        {loading ? (
+            <p>Loading profile...</p>
+        ) : (
+            <div className="account-form">
+              <label className="field-label">
+                Full name
+                <input 
+                  value={formData.name} 
+                  onChange={e => setFormData({...formData, name: e.target.value})} 
+                />
+              </label>
+              <label className="field-label">
+                Email
+                <input 
+                  value={formData.email} 
+                  readOnly 
+                />
+              </label>
+              {status && <p style={{color: status.includes("Failed") || status.includes("Error") ? 'red' : 'green', marginBottom: '10px'}}>{status}</p>}
+              <button className="button button-dark" onClick={handleSave}>Save changes</button>
+            </div>
+        )}
       </section>
     </main>
   );
