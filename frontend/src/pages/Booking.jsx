@@ -128,8 +128,8 @@ export default function Booking() {
           
           {!loading && !error && visibleVenues.length > 0 ? (
             <div className="listing-grid">
-              {(visibleVenues.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)).map((venue) => (
-                <VenueListingCard venue={venue} key={venue.id || venue.name} />
+              {(visibleVenues.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)).map((venue, index) => (
+                <VenueListingCard venue={venue} index={index} key={venue.id || venue.name} />
               ))}
             </div>
           ) : !loading && !error ? (

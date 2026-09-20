@@ -6,6 +6,8 @@ import com.quickcourt.quickcourt_backend.entity.User;
 import com.quickcourt.quickcourt_backend.entity.Venue;
 import com.quickcourt.quickcourt_backend.repository.UserRepository;
 import com.quickcourt.quickcourt_backend.repository.VenueRepository;
+import com.quickcourt.quickcourt_backend.repository.VenuePhotoRepository;
+import com.quickcourt.quickcourt_backend.entity.VenuePhoto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 public class VenueService {
 
     private final VenueRepository venueRepository;
+    private final VenuePhotoRepository venuePhotoRepository;
     private final UserRepository userRepository;
 
     public VenueResponse createVenue(VenueRequest request, Long ownerId) {
@@ -47,11 +50,12 @@ public class VenueService {
         return mapToResponse(venueRepository.save(venue));
     }
 
-    public VenueResponse getVenue(Long id) {
+        public VenueResponse getVenue(Long id) {
         Venue venue = venueRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Venue not found"));
-
-        return mapToResponse(venue);
+        VenueResponse response = mapToResponse(venue);
+        response.setPhotos(venuePhotoRepository.findByVenueIdOrderByCreatedAtDesc(venue.getId()).stream().map(VenuePhoto::getImageUrl).toList());
+        return response;
     }
 
     public Page<VenueResponse> getApprovedVenues(Pageable pageable) {
@@ -111,6 +115,9 @@ public class VenueService {
 
     private VenueResponse mapToResponse(Venue venue) {
         User owner = venue.getOwner();
+        java.util.List<String> photos = venuePhotoRepository != null && venue.getId() != null
+                ? venuePhotoRepository.findByVenueIdOrderByCreatedAtDesc(venue.getId()).stream().map(VenuePhoto::getImageUrl).toList()
+                : java.util.List.of();
 
         return VenueResponse.builder()
                 .id(venue.getId())
@@ -126,7 +133,8 @@ public class VenueService {
                 .sports(venue.getSports())
                 .amenities(venue.getAmenities())
                 .startingPrice(venue.getStartingPrice())
-                .rating(venue.getRating())
+                .photos(photos)
+                .rating((venue.getTotalReviews() == null || venue.getTotalReviews() == 0) ? 0.0 : venue.getRating())
                 .totalReviews(venue.getTotalReviews())
                 .approvalStatus(venue.getApprovalStatus().name())
                 .approvalComment(venue.getApprovalComment())

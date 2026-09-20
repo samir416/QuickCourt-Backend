@@ -26,4 +26,5 @@ public class AuthRequest {
     private String password;
 
     private String role;
+    private String profileImage;
 }

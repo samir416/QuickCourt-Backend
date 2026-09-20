@@ -20,6 +20,7 @@ public class TimeSlotController {
 
     private final TimeSlotService timeSlotService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("#ownerId == authentication.principal.id or hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<TimeSlotResponse> createSlot(
             @Valid @RequestBody TimeSlotRequest request,

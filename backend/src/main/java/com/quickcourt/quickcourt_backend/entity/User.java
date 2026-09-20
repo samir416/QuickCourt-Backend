@@ -42,6 +42,9 @@ public class User implements UserDetails {
     private Boolean emailVerified = false;
 
     private Boolean active = true;
+    
+    @Column(name = "profile_image", length = 500)
+    private String profileImage;
 
     private LocalDateTime createdAt;
 

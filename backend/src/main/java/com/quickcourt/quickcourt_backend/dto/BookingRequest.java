@@ -19,7 +19,6 @@ import java.time.LocalTime;
 @Builder
 public class BookingRequest {
 
-    @NotNull(message = "User ID is required")
     private Long userId;
 
     @NotNull(message = "Court ID is required")

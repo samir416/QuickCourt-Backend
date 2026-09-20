@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Avatar from "./Avatar";
 
 export default function AdminSidebar({ active }) {
   const { user, logout } = useAuth();
@@ -13,7 +14,9 @@ export default function AdminSidebar({ active }) {
 
   return (
     <aside className="account-sidebar">
-      <span className="avatar avatar-large">{user ? user.name.substring(0,2).toUpperCase() : 'U'}</span>
+      <div style={{ marginBottom: "16px" }}>
+        <Avatar name={user?.name} image={user?.profileImage} size={64} className="avatar-large" />
+      </div>
       <h1>{user ? user.name : 'Admin'}</h1>
       <p>{user ? user.email : ''}</p>
       <nav>

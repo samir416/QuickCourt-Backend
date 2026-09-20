@@ -1,166 +1,401 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  Clock3,
+  MapPin,
+  Star,
+  Trophy,
+  Wifi
+} from "lucide-react";
 import { apiFetch } from "../services/api";
-import { useAuth } from "../context/AuthContext";
-import { ArrowLeft, User, MapPin, Star, Clock, CheckCircle, Info, Calendar } from 'lucide-react';
+import "./CourtDetail.css";
 
 export default function CourtDetail() {
   const { venueId } = useParams();
-  const { user } = useAuth();
+
   const [venue, setVenue] = useState(null);
+  const [courts, setCourts] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
-    const fetchVenue = async () => {
+    let mounted = true;
+
+    const loadVenue = async () => {
       try {
         setLoading(true);
-        const data = await apiFetch("/venues/" + venueId);
-        const reviewsData = await apiFetch("/reviews/venue/" + venueId).catch(() => []);
-        setReviews(Array.isArray(reviewsData) ? reviewsData : []);
-        setVenue(data);
+        setError("");
+
+        const venueData = await apiFetch("/venues/" + venueId);
+
+        const [courtsResult, reviewsResult] = await Promise.all([
+          apiFetch("/courts/venue/" + venueId).catch(() => []),
+          apiFetch("/reviews/venue/" + venueId).catch(() => [])
+        ]);
+
+        if (!mounted) return;
+
+        setVenue(venueData);
+        setCourts(Array.isArray(courtsResult) ? courtsResult : []);
+        setReviews(Array.isArray(reviewsResult) ? reviewsResult : []);
       } catch (err) {
-        setError(err.message);
+        if (mounted) {
+          setError(err.message || "Unable to load venue data.");
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
-    fetchVenue();
+
+    loadVenue();
+
+    return () => {
+      mounted = false;
+    };
   }, [venueId]);
 
-  if (loading) return <main className="home-page"><p style={{padding:'20px'}}>Loading venue details...</p></main>;
-  if (error) return <main className="home-page"><p style={{padding:'20px', color:'red'}}>{error}</p></main>;
-  if (!venue) return <main className="home-page"><p style={{padding:'20px'}}>Venue not found.</p></main>;
+  const parseList = value => {
+    if (Array.isArray(value)) {
+      return value.map(item => String(item).trim()).filter(Boolean);
+    }
 
-  const parseStringArray = (data) => {
-    if (!data) return [];
-    if (Array.isArray(data)) return data;
-    if (typeof data === 'string') return data.split(',').map(s => s.trim()).filter(Boolean);
-    return [];
+    if (!value) return [];
+
+    return String(value)
+      .split(",")
+      .map(item => item.trim())
+      .filter(Boolean);
   };
-  
-  const normalizedSports = parseStringArray(venue.sports);
-  const normalizedAmenities = parseStringArray(venue.amenities);
-  const hasReviews = venue.rating && venue.rating > 0 && venue.totalReviews > 0;
 
-  return (
-    <main className="home-page">
-      
-      <div className="detail-gallery">
-        <img
-          src={venue.photos && venue.photos.length > 0 ? venue.photos[0] : "https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=1200&q=80"}
-          alt="Venue"
-        />
-      </div>
-      <div className="detail-container">
-        <div className="detail-main">
-          <div className="detail-brand-row">
-            <div>
-              <h1>{venue.name}</h1>
-              <p className="detail-location">
-                <span><MapPin size={16} style={{marginRight: '4px', verticalAlign: 'text-bottom'}} /> {venue.city || venue.address || venue.location}</span>
-                <span className="detail-rating" style={{ display: 'inline-flex', alignItems: 'center' }}>
-                  {hasReviews ? (
-                    <>
-                       <Star size={16} fill="currentColor" style={{marginRight: '4px', color: '#ffc107'}} /> 
-                       {Number(venue.rating).toFixed(1)} <small style={{marginLeft: '4px', color: '#666'}}>({venue.totalReviews} reviews)</small>
-                    </>
-                  ) : (
-                       <span style={{ fontSize: '13px', color: '#666' }}>No reviews yet</span>
-                  )}
-                </span>
-              </p>
-            </div>
+  const sports = useMemo(
+    () => parseList(venue?.sports),
+    [venue?.sports]
+  );
+
+  const amenities = useMemo(
+    () => parseList(venue?.amenities),
+    [venue?.amenities]
+  );
+
+  const photos = useMemo(() => {
+    if (!Array.isArray(venue?.photos)) return [];
+    return venue.photos
+      .map((photo, index) => {
+        if (typeof photo === "string") {
+          return { id: index, url: photo };
+        }
+        if (photo && (photo.url || photo.imageUrl)) {
+          return { id: photo.id || index, url: photo.url || photo.imageUrl };
+        }
+        return null;
+      })
+      .filter(Boolean);
+  }, [venue?.photos]);
+
+  const rating =
+    venue?.averageRating !== undefined && venue?.averageRating !== null
+      ? Number(venue.averageRating)
+      : venue?.rating !== undefined && venue?.rating !== null
+        ? Number(venue.rating)
+        : 0;
+
+  const totalReviews =
+    venue?.totalReviews !== undefined && venue?.totalReviews !== null
+      ? Number(venue.totalReviews)
+      : reviews.length;
+
+  const openingTime = courts
+    .map(court => court.openingTime)
+    .filter(Boolean)
+    .sort()[0];
+
+  const closingTime = courts
+    .map(court => court.closingTime)
+    .filter(Boolean)
+    .sort()
+    .slice(-1)[0];
+
+  const formatTime = value => {
+    if (!value) return "";
+
+    const parts = String(value).split(":");
+
+    if (parts.length < 2) return value;
+
+    const hour = Number(parts[0]);
+    const minute = parts[1];
+
+    if (Number.isNaN(hour)) return value;
+
+    const suffix = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour % 12 || 12;
+
+    return `${displayHour}:${minute} ${suffix}`;
+  };
+
+  if (loading) {
+    return (
+      <main className="venue-detail-page">
+        <div className="venue-detail-container">
+          <div className="venue-state">
+            <div className="venue-loader" />
+            <p>Loading venue...</p>
           </div>
-          <div className="detail-mobile-action">
-            <Link
-              to={"/booking/" + venue.id + "/reserve"}
-              className="button button-dark button-full"
-            >
-              Book This Venue
+        </div>
+      </main>
+    );
+  }
+
+  if (error || !venue) {
+    return (
+      <main className="venue-detail-page">
+        <div className="venue-detail-container">
+          <div className="venue-state">
+            <h2>Unable to load venue</h2>
+            <p>{error || "Venue data is unavailable."}</p>
+            <Link to="/booking" className="venue-dark-button">
+              <ArrowLeft size={16} />
+              Back to venues
             </Link>
           </div>
-          <div className="detail-section">
-            <h2>Sports</h2>
-            <div className="sports-options">
-              {normalizedSports.length > 0 ? normalizedSports.map(s => (
-                  <span key={s} className="sport-pill">{s}</span>
-              )) : <span className="sport-pill">Multi-sport</span>}
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="venue-detail-page">
+      <div className="venue-detail-container">
+        <Link to="/booking" className="venue-back-link">
+          <ArrowLeft size={16} />
+          Back to venues
+        </Link>
+
+        <section className="venue-detail-card">
+          <div className="venue-header">
+            <div className="venue-header-info">
+              <p className="venue-eyebrow">Sports Venue</p>
+
+              <h1>{venue.name}</h1>
+
+              <div className="venue-meta">
+                <span>
+                  <MapPin size={16} />
+                  {venue.city || venue.address || "Location unavailable"}
+                </span>
+
+                {totalReviews > 0 && rating > 0 && (
+                  <span>
+                    <Star size={15} fill="currentColor" />
+                    {rating.toFixed(1)}
+                    <small>({totalReviews} reviews)</small>
+                  </span>
+                )}
+              </div>
             </div>
+
+            <Link
+              to={"/booking/" + venue.id + "/reserve"}
+              className="venue-book-button"
+            >
+              Book this venue
+            </Link>
           </div>
-          <div className="detail-section">
-            <h2>About</h2>
-            <p>
-              {venue.description || "A premium sports facility offering top-tier courts for all your athletic needs."}
-            </p>
-          </div>
-          <div className="detail-grid-section">
-            <div className="detail-box">
-              <h2><Clock size={20} style={{marginRight: '8px', verticalAlign: 'text-bottom'}} /> Operating Hours</h2>
-              <p>Mon - Sun: 06:00 AM - 11:00 PM</p>
-            </div>
-            <div className="detail-box">
-              <h2><MapPin size={20} style={{marginRight: '8px', verticalAlign: 'text-bottom'}} /> Address</h2>
-              <p>{venue.address || venue.city || venue.location}</p>
-            </div>
-          </div>
-          <div className="detail-section">
-            <h2>Amenities</h2>
-            <div className="amenities-grid">
-              {normalizedAmenities.length > 0 ? normalizedAmenities.map(amenity => (
-                <span key={amenity}><CheckCircle size={16} style={{marginRight: '4px', verticalAlign: 'text-bottom'}} /> {amenity}</span>
-              )) : (
-                 <>
-                   <span><CheckCircle size={16} style={{marginRight: '4px', verticalAlign: 'text-bottom'}} /> Parking</span>
-                   <span><CheckCircle size={16} style={{marginRight: '4px', verticalAlign: 'text-bottom'}} /> Changing Rooms</span>
-                   <span><CheckCircle size={16} style={{marginRight: '4px', verticalAlign: 'text-bottom'}} /> Drinking Water</span>
-                 </>
+
+          <div className="venue-main-grid">
+            <div className="venue-gallery">
+              {photos.length > 0 ? (
+                <>
+                  <div className="venue-main-photo">
+                    <img
+                      src={photos[0].url}
+                      alt={venue.name}
+                    />
+                  </div>
+
+                  {photos.length > 1 && (
+                    <div className="venue-photo-strip">
+                      {photos.slice(1, 5).map((photo, index) => (
+                        <img
+                          key={photo.id || index}
+                          src={photo.url}
+                          alt={`${venue.name} ${index + 2}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="venue-no-photo">
+                  <span>No venue photos available</span>
+                </div>
               )}
             </div>
-          </div>
-          <div className="detail-section">
-            <h2>Reviews</h2>
-            {reviews.length > 0 ? reviews.map(r => (
-                <ReviewItem key={r.id} name={r.playerName || "Player"} date={new Date().toLocaleDateString()} text={r.comment} rating={r.rating} />
-              )) : <p>No reviews yet.</p>}
-          </div>
-        </div>
-        <div className="detail-sidebar">
-          <div className="booking-widget">
-            <div className="widget-price">
-              <strong>Starting from INR {venue.startingPrice || venue.price}</strong>
-              <span>/ hour</span>
+
+            <div className="venue-info-column">
+              <div className="venue-info-card">
+                <p className="venue-eyebrow">Operating Hours</p>
+
+                <div className="venue-info-value">
+                  <Clock3 size={17} />
+
+                  {openingTime && closingTime
+                    ? `${formatTime(openingTime)} - ${formatTime(closingTime)}`
+                    : "Hours unavailable"}
+                </div>
+              </div>
+
+              <div className="venue-info-card">
+                <p className="venue-eyebrow">Address</p>
+
+                <div className="venue-info-value venue-address">
+                  <MapPin size={17} />
+
+                  <span>
+                    {venue.address || "Address unavailable"}
+                    {venue.city ? `, ${venue.city}` : ""}
+                    {venue.state ? `, ${venue.state}` : ""}
+                    {venue.pincode ? ` - ${venue.pincode}` : ""}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="widget-rules">
-              <p><Info size={16} style={{marginRight: '8px', verticalAlign: 'text-bottom'}} /> Tournament Training Venue</p>
-              <p><Info size={16} style={{marginRight: '8px', verticalAlign: 'text-bottom'}} /> For more than 2 players, INR 50 extra per person</p>
-              <p><Info size={16} style={{marginRight: '8px', verticalAlign: 'text-bottom'}} /> Equipment available on rent</p>
-            </div>
-            <Link
-              to={"/booking/" + venue.id + "/reserve"}
-              className="button button-dark button-full"
-            >
-              Check Availability
-            </Link>
           </div>
-        </div>
+
+          <section className="venue-section-block">
+            <p className="venue-eyebrow">Sports</p>
+
+            {sports.length > 0 ? (
+              <div className="venue-chip-list">
+                {sports.map((sport, index) => (
+                  <div className="venue-chip" key={`${sport}-${index}`}>
+                    <Trophy size={15} />
+                    {sport}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="venue-muted">No sports information available.</p>
+            )}
+          </section>
+
+          <section className="venue-section-block">
+            <p className="venue-eyebrow">Amenities</p>
+
+            {amenities.length > 0 ? (
+              <div className="venue-amenities">
+                {amenities.map((amenity, index) => (
+                  <div
+                    className="venue-amenity"
+                    key={`${amenity}-${index}`}
+                  >
+                    <Wifi size={15} />
+                    {amenity}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="venue-empty-box">
+                No amenities information available.
+              </div>
+            )}
+          </section>
+
+          <section className="venue-section-block">
+            <p className="venue-eyebrow">About This Venue</p>
+
+            <p className="venue-description">
+              {venue.description || "No description available."}
+            </p>
+          </section>
+
+          {courts.length > 0 && (
+            <section className="venue-section-block">
+              <div className="venue-section-title">
+                <div>
+                  <p className="venue-eyebrow">Available Courts</p>
+                  <h2>{courts.length} court{courts.length !== 1 ? "s" : ""}</h2>
+                </div>
+              </div>
+
+              <div className="venue-court-grid">
+                {courts.map(court => (
+                  <article className="venue-court-card" key={court.id}>
+                    <div>
+                      <span className="venue-court-sport">
+                        {court.sport || "Sport"}
+                      </span>
+
+                      <h3>
+                        {court.name || court.courtName || "Court"}
+                      </h3>
+                    </div>
+
+                    <strong>
+                      INR {Number(court.pricePerHour || 0).toFixed(2)}
+                      <small>/hour</small>
+                    </strong>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="venue-section-block">
+            <div className="venue-section-title">
+              <div>
+                <p className="venue-eyebrow">Reviews</p>
+                <h2>
+                  {totalReviews > 0
+                    ? `${totalReviews} review${totalReviews !== 1 ? "s" : ""}`
+                    : "Reviews"}
+                </h2>
+              </div>
+            </div>
+
+            {reviews.length === 0 ? (
+              <div className="venue-empty-box">
+                No reviews yet.
+              </div>
+            ) : (
+              <div className="venue-reviews">
+                {reviews.map(review => (
+                  <article className="venue-review" key={review.id}>
+                    <div className="venue-review-top">
+                      <strong>
+                        {review.userName ||
+                          review.user?.name ||
+                          "Player"}
+                      </strong>
+
+                      <span className="venue-review-rating">
+                        <Star size={14} fill="currentColor" />
+                        {review.rating || 0}/5
+                      </span>
+                    </div>
+
+                    <p>
+                      {review.comment || "No comment provided."}
+                    </p>
+
+                    {review.createdAt && (
+                      <small>
+                        {new Date(review.createdAt).toLocaleDateString(
+                          "en-IN"
+                        )}
+                      </small>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </section>
       </div>
     </main>
-  );
-}
-
-function ReviewItem({ name, date, text, rating }) {
-  return (
-    <div className="review-item">
-      <div className="review-header">
-        <div className="review-avatar">{name.charAt(0)}</div>
-        <div className="review-meta">
-          <strong>{name} <span style={{color: '#ffc107', marginLeft: '4px'}}><Star size={14} fill="currentColor" style={{verticalAlign: 'text-bottom'}}/> {rating}</span></strong>
-          <time><Calendar size={14} style={{marginRight: '4px', verticalAlign: 'text-bottom'}} /> {date}</time>
-        </div>
-      </div>
-      <p>{text}</p>
-    </div>
   );
 }

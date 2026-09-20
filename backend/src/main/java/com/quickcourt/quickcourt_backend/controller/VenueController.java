@@ -20,6 +20,7 @@ public class VenueController {
 
     private final VenueService venueService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("#ownerId == authentication.principal.id or hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<VenueResponse> createVenue(
             @Valid @RequestBody VenueRequest request,
@@ -64,6 +65,7 @@ public class VenueController {
         );
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("#ownerId == authentication.principal.id or hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<VenueResponse> updateVenue(
             @PathVariable Long id,
@@ -75,6 +77,7 @@ public class VenueController {
         );
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("#ownerId == authentication.principal.id or hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteVenue(
             @PathVariable Long id,

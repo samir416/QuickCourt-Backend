@@ -4,19 +4,17 @@ import com.quickcourt.quickcourt_backend.dto.BookingRequest;
 import com.quickcourt.quickcourt_backend.dto.BookingResponse;
 import com.quickcourt.quickcourt_backend.entity.Booking;
 import com.quickcourt.quickcourt_backend.entity.Court;
-import com.quickcourt.quickcourt_backend.entity.TimeSlot;
 import com.quickcourt.quickcourt_backend.entity.User;
 import com.quickcourt.quickcourt_backend.repository.BookingRepository;
 import com.quickcourt.quickcourt_backend.repository.CourtRepository;
-import com.quickcourt.quickcourt_backend.repository.TimeSlotRepository;
 import com.quickcourt.quickcourt_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,71 +26,127 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final CourtRepository courtRepository;
-    private final TimeSlotRepository timeSlotRepository;
 
     public BookingResponse createBooking(BookingRequest request) {
+
+        if (request.getUserId() == null) {
+            throw new RuntimeException("User ID is required");
+        }
+
+        if (request.getCourtId() == null) {
+            throw new RuntimeException("Court ID is required");
+        }
+
+        if (request.getBookingDate() == null) {
+            throw new RuntimeException("Booking date is required");
+        }
+
+        if (request.getStartTime() == null) {
+            throw new RuntimeException("Start time is required");
+        }
+
+        if (request.getDurationHours() == null || request.getDurationHours() <= 0) {
+            throw new RuntimeException("Invalid booking duration");
+        }
+
+        if (request.getBookingDate().isBefore(LocalDate.now())) {
+            throw new RuntimeException("Booking date cannot be in the past");
+        }
+
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (!Boolean.TRUE.equals(user.getActive())) {
-            throw new RuntimeException("User account is inactive");
-        }
+        
 
         Court court = courtRepository.findById(request.getCourtId())
                 .orElseThrow(() -> new RuntimeException("Court not found"));
 
-        if (!Boolean.TRUE.equals(court.getActive())) {
-            throw new RuntimeException("Court is not available");
-        }
+        
 
-        LocalDate bookingDate = request.getBookingDate();
         LocalTime startTime = request.getStartTime();
-        Integer durationHours = request.getDurationHours();
 
-        if (bookingDate.isBefore(LocalDate.now())) {
-            throw new RuntimeException("Booking date cannot be in the past");
+        LocalTime endTime;
+
+        try {
+            endTime = startTime.plusHours(request.getDurationHours());
+        } catch (Exception exception) {
+            throw new RuntimeException("Invalid booking time");
         }
 
-        if (durationHours == null || durationHours <= 0) {
-            throw new RuntimeException("Duration must be greater than zero");
+        LocalTime openingTime = parseTime(court.getOpeningTime());
+        LocalTime closingTime = parseTime(court.getClosingTime());
+
+        if (openingTime != null && startTime.isBefore(openingTime)) {
+            throw new RuntimeException("Booking starts before court opening time");
         }
 
-        LocalTime endTime = startTime.plusHours(durationHours);
+        if (closingTime != null && endTime.isAfter(closingTime)) {
+            throw new RuntimeException("Booking exceeds court operating hours");
+        }
 
-        validateOperatingHours(court, startTime, endTime);
-        validateBookingTime(bookingDate, startTime);
-        validateBlockedSlots(
-                court.getId(),
-                bookingDate,
-                startTime,
-                endTime
-        );
-        validateAvailability(
-                court.getId(),
-                bookingDate,
-                startTime,
-                endTime
-        );
+        if (!request.getBookingDate().isAfter(LocalDate.now())
+                && request.getBookingDate().equals(LocalDate.now())
+                && startTime.isBefore(LocalTime.now())) {
+            throw new RuntimeException("Cannot book a past time slot");
+        }
 
-        double totalPrice = court.getPricePerHour() * durationHours;
+        List<Booking> existingBookings =
+                bookingRepository.findByCourtIdAndBookingDate(
+                        court.getId(),
+                        request.getBookingDate()
+                );
+
+        for (Booking existing : existingBookings) {
+
+            if (existing.getStatus() == Booking.BookingStatus.CANCELLED) {
+                continue;
+            }
+
+            LocalTime existingStart = existing.getStartTime();
+            LocalTime existingEnd = existing.getEndTime();
+
+            if (existingStart == null || existingEnd == null) {
+                continue;
+            }
+
+            boolean overlaps =
+                    startTime.isBefore(existingEnd)
+                            && endTime.isAfter(existingStart);
+
+            if (overlaps) {
+                throw new RuntimeException(
+                        "This court is already booked for the selected time"
+                );
+            }
+        }
+
+        double pricePerHour = court.getPricePerHour() == null
+                ? 0.0
+                : court.getPricePerHour();
+
+        double totalPrice =
+                pricePerHour * request.getDurationHours();
 
         Booking booking = Booking.builder()
                 .user(user)
                 .court(court)
-                .bookingDate(bookingDate)
+                .bookingDate(request.getBookingDate())
                 .startTime(startTime)
-                .durationHours(durationHours)
                 .endTime(endTime)
+                .durationHours(request.getDurationHours())
                 .totalPrice(totalPrice)
-                .status(Booking.BookingStatus.PENDING)
+                .status(Booking.BookingStatus.CONFIRMED)
                 .paymentStatus(Booking.PaymentStatus.PENDING)
                 .build();
 
-        return mapToResponse(bookingRepository.save(booking));
+        Booking saved = bookingRepository.save(booking);
+
+        return mapToResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public BookingResponse getBooking(Long id) {
+
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
 
@@ -101,6 +155,7 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public List<BookingResponse> getUserBookings(Long userId) {
+
         if (!userRepository.existsById(userId)) {
             throw new RuntimeException("User not found");
         }
@@ -114,6 +169,7 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public List<BookingResponse> getVenueBookings(Long venueId) {
+
         return bookingRepository
                 .findByCourtVenueIdOrderByBookingDateDescStartTimeDesc(venueId)
                 .stream()
@@ -126,10 +182,6 @@ public class BookingService {
             Long courtId,
             LocalDate bookingDate) {
 
-        if (!courtRepository.existsById(courtId)) {
-            throw new RuntimeException("Court not found");
-        }
-
         return bookingRepository
                 .findByCourtIdAndBookingDate(courtId, bookingDate)
                 .stream()
@@ -138,10 +190,13 @@ public class BookingService {
     }
 
     public BookingResponse cancelBooking(Long bookingId, Long userId) {
-        Booking booking = getBookingEntity(bookingId);
 
-        if (!booking.getUser().getId().equals(userId)) {
-            throw new RuntimeException("You are not authorized to cancel this booking");
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (booking.getUser() == null
+                || !booking.getUser().getId().equals(userId)) {
+            throw new RuntimeException("You are not allowed to cancel this booking");
         }
 
         if (booking.getStatus() == Booking.BookingStatus.CANCELLED) {
@@ -152,34 +207,33 @@ public class BookingService {
             throw new RuntimeException("Completed booking cannot be cancelled");
         }
 
-        LocalDateTime bookingStart = LocalDateTime.of(
-                booking.getBookingDate(),
-                booking.getStartTime()
-        );
+        LocalDate today = LocalDate.now();
 
-        if (!bookingStart.isAfter(LocalDateTime.now())) {
-            throw new RuntimeException("Past or ongoing booking cannot be cancelled");
+        if (booking.getBookingDate().isBefore(today)
+                || (booking.getBookingDate().equals(today)
+                && booking.getStartTime() != null
+                && !booking.getStartTime().isAfter(LocalTime.now()))) {
+            throw new RuntimeException("Past booking cannot be cancelled");
         }
 
         booking.setStatus(Booking.BookingStatus.CANCELLED);
 
-        return mapToResponse(bookingRepository.save(booking));
+        Booking saved = bookingRepository.save(booking);
+
+        return mapToResponse(saved);
     }
 
     public BookingResponse completeBooking(Long bookingId) {
-        Booking booking = getBookingEntity(bookingId);
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
 
         if (booking.getStatus() == Booking.BookingStatus.CANCELLED) {
             throw new RuntimeException("Cancelled booking cannot be completed");
         }
 
-        LocalDateTime bookingEnd = LocalDateTime.of(
-                booking.getBookingDate(),
-                booking.getEndTime()
-        );
-
-        if (bookingEnd.isAfter(LocalDateTime.now())) {
-            throw new RuntimeException("Booking has not been completed yet");
+        if (booking.getStatus() == Booking.BookingStatus.COMPLETED) {
+            return mapToResponse(booking);
         }
 
         booking.setStatus(Booking.BookingStatus.COMPLETED);
@@ -188,7 +242,9 @@ public class BookingService {
     }
 
     public BookingResponse simulatePayment(Long bookingId) {
-        Booking booking = getBookingEntity(bookingId);
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
 
         if (booking.getStatus() == Booking.BookingStatus.CANCELLED) {
             throw new RuntimeException("Cancelled booking cannot be paid");
@@ -198,137 +254,95 @@ public class BookingService {
             return mapToResponse(booking);
         }
 
-        booking.setPaymentStatus(Booking.PaymentStatus.SUCCESS);
-        booking.setPaymentReference(
-                "QC-" + UUID.randomUUID()
+        String reference =
+                "QC-" +
+                UUID.randomUUID()
                         .toString()
+                        .replace("-", "")
                         .substring(0, 8)
-                        .toUpperCase()
-        );
+                        .toUpperCase();
+
+        booking.setPaymentStatus(Booking.PaymentStatus.SUCCESS);
+        booking.setPaymentReference(reference);
         booking.setStatus(Booking.BookingStatus.CONFIRMED);
 
         return mapToResponse(bookingRepository.save(booking));
     }
 
-    private Booking getBookingEntity(Long bookingId) {
-        return bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
-    }
+    private LocalTime parseTime(String value) {
 
-    private void validateOperatingHours(
-            Court court,
-            LocalTime startTime,
-            LocalTime endTime) {
-
-        LocalTime openingTime = parseTime(court.getOpeningTime());
-        LocalTime closingTime = parseTime(court.getClosingTime());
-
-        if (startTime.isBefore(openingTime)) {
-            throw new RuntimeException("Booking starts before court opening time");
+        if (value == null || value.isBlank()) {
+            return null;
         }
 
-        if (endTime.isAfter(closingTime)) {
-            throw new RuntimeException("Booking ends after court closing time");
-        }
-    }
+        String normalized = value.trim();
 
-    private void validateBookingTime(
-            LocalDate bookingDate,
-            LocalTime startTime) {
-
-        LocalDate today = LocalDate.now();
-
-        if (bookingDate.equals(today)
-                && !startTime.isAfter(LocalTime.now())) {
-            throw new RuntimeException("Booking time must be in the future");
-        }
-    }
-
-    private void validateBlockedSlots(
-            Long courtId,
-            LocalDate bookingDate,
-            LocalTime requestedStart,
-            LocalTime requestedEnd) {
-
-        List<TimeSlot> blockedSlots =
-                timeSlotRepository
-                        .findByCourtIdAndSlotDateAndStatusOrderByStartTimeAsc(
-                                courtId,
-                                bookingDate,
-                                TimeSlot.SlotStatus.BLOCKED
-                        );
-
-        boolean blocked = blockedSlots.stream()
-                .anyMatch(slot ->
-                        requestedStart.isBefore(slot.getEndTime())
-                                && requestedEnd.isAfter(slot.getStartTime())
-                );
-
-        if (blocked) {
-            throw new RuntimeException(
-                    "Selected time slot is blocked for maintenance"
-            );
-        }
-    }
-
-    private void validateAvailability(
-            Long courtId,
-            LocalDate bookingDate,
-            LocalTime requestedStart,
-            LocalTime requestedEnd) {
-
-        List<Booking> bookings = bookingRepository
-                .findByCourtIdAndBookingDate(courtId, bookingDate);
-
-        boolean conflict = bookings.stream()
-                .filter(booking ->
-                        booking.getStatus()
-                                != Booking.BookingStatus.CANCELLED)
-                .anyMatch(booking ->
-                        requestedStart.isBefore(booking.getEndTime())
-                                && requestedEnd.isAfter(booking.getStartTime())
-                );
-
-        if (conflict) {
-            throw new RuntimeException(
-                    "Selected time slot is already booked"
-            );
-        }
-    }
-
-    private LocalTime parseTime(String time) {
         try {
-            return LocalTime.parse(time);
-        } catch (Exception exception) {
-            throw new RuntimeException(
-                    "Invalid court operating time format. Use HH:mm:ss or HH:mm"
+            return LocalTime.parse(
+                    normalized,
+                    DateTimeFormatter.ofPattern("HH:mm")
             );
+        } catch (Exception ignored) {
+        }
+
+        try {
+            return LocalTime.parse(
+                    normalized,
+                    DateTimeFormatter.ofPattern("H:mm")
+            );
+        } catch (Exception ignored) {
+        }
+
+        try {
+            return LocalTime.parse(normalized);
+        } catch (Exception ignored) {
+            return null;
         }
     }
 
     private BookingResponse mapToResponse(Booking booking) {
-        User user = booking.getUser();
+
         Court court = booking.getCourt();
+        User user = booking.getUser();
 
         return BookingResponse.builder()
                 .id(booking.getId())
-                .userId(user.getId())
-                .userName(user.getName())
-                .userEmail(user.getEmail())
-                .venueId(court.getVenue().getId())
-                .venueName(court.getVenue().getName())
-                .courtId(court.getId())
-                .courtName(court.getName())
-                .sport(court.getSport())
+                .userId(user != null ? user.getId() : null)
+                .userName(user != null ? user.getName() : null)
+                .userEmail(user != null ? user.getEmail() : null)
+                .venueId(
+                        court != null && court.getVenue() != null
+                                ? court.getVenue().getId()
+                                : null
+                )
+                .venueName(
+                        court != null && court.getVenue() != null
+                                ? court.getVenue().getName()
+                                : null
+                )
+                .courtId(court != null ? court.getId() : null)
+                .courtName(court != null ? court.getName() : null)
+                .sport(court != null ? court.getSport() : null)
                 .bookingDate(booking.getBookingDate())
                 .startTime(booking.getStartTime())
                 .endTime(booking.getEndTime())
                 .durationHours(booking.getDurationHours())
-                .pricePerHour(court.getPricePerHour())
+                .pricePerHour(
+                        court != null ? court.getPricePerHour() : null
+                )
                 .totalPrice(booking.getTotalPrice())
-                .status(booking.getStatus().name())
-                .paymentStatus(booking.getPaymentStatus().name())
+                .status(
+                        booking.getStatus() != null
+                                ? booking.getStatus().name()
+                                : null
+                )
+                .paymentStatus(
+                        booking.getPaymentStatus() != null
+                                ? booking.getPaymentStatus().name()
+                                : null
+                )
                 .paymentReference(booking.getPaymentReference())
                 .build();
     }
 }
+

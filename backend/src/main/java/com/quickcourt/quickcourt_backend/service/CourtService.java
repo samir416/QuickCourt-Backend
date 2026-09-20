@@ -6,12 +6,16 @@ import com.quickcourt.quickcourt_backend.entity.Court;
 import com.quickcourt.quickcourt_backend.entity.User;
 import com.quickcourt.quickcourt_backend.entity.Venue;
 import com.quickcourt.quickcourt_backend.repository.CourtRepository;
+import com.quickcourt.quickcourt_backend.repository.BookingRepository;
 import com.quickcourt.quickcourt_backend.repository.UserRepository;
 import com.quickcourt.quickcourt_backend.repository.VenueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Arrays;
+import java.time.LocalDate;
+import com.quickcourt.quickcourt_backend.entity.Booking;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +24,7 @@ public class CourtService {
     private final CourtRepository courtRepository;
     private final VenueRepository venueRepository;
     private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
 
     public CourtResponse createCourt(CourtRequest request, Long ownerId) {
         User owner = getOwner(ownerId);
@@ -87,6 +92,10 @@ public class CourtService {
 
         validateVenueOwner(court.getVenue(), owner);
 
+                if (bookingRepository.existsByCourtIdAndBookingDateGreaterThanEqualAndStatusIn(
+                id, LocalDate.now(), Arrays.asList(Booking.BookingStatus.CONFIRMED, Booking.BookingStatus.PENDING))) {
+            throw new RuntimeException("Cannot delete court: there are active or pending upcoming bookings.");
+        }
         court.setActive(false);
         courtRepository.save(court);
     }

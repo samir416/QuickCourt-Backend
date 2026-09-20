@@ -1,5 +1,6 @@
 package com.quickcourt.quickcourt_backend.controller;
 
+import com.quickcourt.quickcourt_backend.dto.BookingResponse;
 import com.quickcourt.quickcourt_backend.dto.OwnerDashboardResponse;
 import com.quickcourt.quickcourt_backend.dto.PeakBookingHoursResponse;
 import com.quickcourt.quickcourt_backend.service.OwnerDashboardService;
@@ -23,6 +24,15 @@ public class OwnerDashboardController {
 
         return ResponseEntity.ok(
                 ownerDashboardService.getDashboard(ownerId)
+        );
+    }
+
+    @GetMapping("/{ownerId}/upcoming")
+    public ResponseEntity<List<BookingResponse>> getUpcomingBookings(
+            @PathVariable Long ownerId) {
+
+        return ResponseEntity.ok(
+                ownerDashboardService.getUpcomingBookings(ownerId)
         );
     }
 

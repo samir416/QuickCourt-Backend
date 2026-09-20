@@ -26,6 +26,7 @@ public class SecurityConfig {
             HttpSecurity http) throws Exception {
 
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
@@ -35,7 +36,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**", "/api/home/**", "/error").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/venues/**", "/api/courts/**", "/api/matches/**", "/api/reviews/**", "/api/time-slots/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/profile/upload").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/venues/**", "/api/courts/**", "/api/matches/**", "/api/reviews/**", "/api/time-slots/**", "/api/venue-photos/files/**", "/api/profile/image/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/owner/**").hasRole("FACILITY_OWNER")
                         .requestMatchers(HttpMethod.POST, "/api/venues/**", "/api/courts/**", "/api/time-slots/**").hasRole("FACILITY_OWNER")
@@ -43,9 +45,34 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/venues/**", "/api/courts/**", "/api/time-slots/**").hasRole("FACILITY_OWNER")
                         .anyRequest().authenticated()
                 )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Authentication required. Please log in again.\"}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"status\":403,\"error\":\"Forbidden\",\"message\":\"Access denied. You do not have permission to perform this operation.\"}");
+                        })
+                )
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
+        org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
+        configuration.setAllowedOriginPatterns(java.util.List.of("*"));
+        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
+        configuration.setAllowedHeaders(java.util.List.of("*"));
+        configuration.setAllowCredentials(true);
+        configuration.setExposedHeaders(java.util.List.of("*"));
+        org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

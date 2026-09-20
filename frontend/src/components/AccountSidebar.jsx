@@ -1,11 +1,14 @@
-﻿import { Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Avatar from "./Avatar";
 
 export default function AccountSidebar({ active }) {
   const { user, logout } = useAuth();
   return (
     <aside className="account-sidebar">
-      <span className="avatar avatar-large">{user && user.name ? user.name.substring(0,2).toUpperCase() : "MA"}</span>
+      <div style={{ marginBottom: "16px" }}>
+        <Avatar name={user?.name} image={user?.profileImage} size={64} className="avatar-large" />
+      </div>
       <h1>{user ? user.name : "Player"}</h1>
       <p>
         {user ? user.email : "user@example.com"}

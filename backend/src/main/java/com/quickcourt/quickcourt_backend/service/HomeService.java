@@ -22,7 +22,7 @@ public class HomeService {
 
         List<Venue> venues = venueRepository.findByApprovalStatus(
                 Venue.ApprovalStatus.APPROVED
-        );
+        ).stream().filter(v -> Boolean.TRUE.equals(v.getActive())).collect(Collectors.toList());
 
         List<VenueResponse> approvedVenues = venues.stream()
                 .map(this::toResponse)
@@ -34,7 +34,7 @@ public class HomeService {
                     Double rating2 = v2.getRating() == null ? 0.0 : v2.getRating();
                     return Double.compare(rating2, rating1);
                 })
-                .limit(6)
+                .limit(8)
                 .map(this::toResponse)
                 .toList();
 
@@ -51,7 +51,7 @@ public class HomeService {
         List<String> popularSports = sportCounts.entrySet()
                 .stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                .limit(8)
+                .limit(6)
                 .map(Map.Entry::getKey)
                 .toList();
 
@@ -85,8 +85,8 @@ public class HomeService {
                 .sports(venue.getSports())
                 .amenities(venue.getAmenities())
                 .startingPrice(venue.getStartingPrice())
-                .rating(venue.getRating())
-                .totalReviews(0)
+                .rating((venue.getTotalReviews() == null || venue.getTotalReviews() == 0) ? 0.0 : venue.getRating())
+                .totalReviews(venue.getTotalReviews() == null ? 0 : venue.getTotalReviews())
                 .approvalStatus(
                         venue.getApprovalStatus() != null
                                 ? venue.getApprovalStatus().name()

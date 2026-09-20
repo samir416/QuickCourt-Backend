@@ -16,4 +16,5 @@ public class OwnerDashboardResponse {
     private long activeCourts;
     private long totalVenues;
     private double totalEarnings;
+    private double monthlyEarnings;
 }

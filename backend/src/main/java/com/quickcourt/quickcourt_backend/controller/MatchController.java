@@ -16,7 +16,7 @@ public class MatchController {
     private final MatchService matchService;
 
     @GetMapping
-    public ResponseEntity<List<MatchResponse>> getMatches(@RequestParam Long userId) {
+    public ResponseEntity<List<MatchResponse>> getMatches(@RequestParam(required = false) Long userId) {
         return ResponseEntity.ok(matchService.getAvailableMatches(userId));
     }
 

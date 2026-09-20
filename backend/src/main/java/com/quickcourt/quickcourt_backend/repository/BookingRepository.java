@@ -36,4 +36,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     long countByStatus(Booking.BookingStatus status);
 
     long countByCourtVenueId(Long venueId);
+
+    boolean existsByCourtIdAndBookingDateGreaterThanEqualAndStatusIn(
+            Long courtId,
+            LocalDate bookingDate,
+            List<Booking.BookingStatus> statuses
+    );
 }

@@ -44,6 +44,20 @@ public class AdminDashboardStatsService {
                                 .equalsIgnoreCase("FACILITY_OWNER"))
                 .count();
 
+        long totalPlayers = users.stream()
+                .filter(user -> user.getRole() != null)
+                .filter(user ->
+                        user.getRole().name()
+                                .equalsIgnoreCase("PLAYER"))
+                .count();
+
+        long totalAdmins = users.stream()
+                .filter(user -> user.getRole() != null)
+                .filter(user ->
+                        user.getRole().name()
+                                .equalsIgnoreCase("ADMIN"))
+                .count();
+
         long activeCourts = courts.stream()
                 .filter(court ->
                         court.getActive() != null
@@ -81,6 +95,7 @@ public class AdminDashboardStatsService {
                 .forEach(sports::add);
 
         double totalEarnings = bookings.stream()
+                .filter(booking -> booking.getStatus() != Booking.BookingStatus.CANCELLED)
                 .filter(booking ->
                         booking.getPaymentStatus()
                                 == Booking.PaymentStatus.SUCCESS)
@@ -93,6 +108,9 @@ public class AdminDashboardStatsService {
         return AdminDashboardStatsResponse.builder()
                 .totalUsers(totalUsers)
                 .totalFacilityOwners(totalFacilityOwners)
+                .facilityOwners(totalFacilityOwners)
+                .totalPlayers(totalPlayers)
+                .totalAdmins(totalAdmins)
                 .totalBookings(bookings.size())
                 .activeCourts(activeCourts)
                 .totalVenues(venues.size())

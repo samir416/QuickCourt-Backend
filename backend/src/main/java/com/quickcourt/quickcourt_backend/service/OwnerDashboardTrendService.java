@@ -55,6 +55,7 @@ public class OwnerDashboardTrendService {
             YearMonth month = currentMonth.minusMonths(i);
 
             long bookingCount = bookings.stream()
+                    .filter(booking -> booking.getStatus() != Booking.BookingStatus.CANCELLED)
                     .filter(booking -> booking.getBookingDate() != null)
                     .filter(booking ->
                             YearMonth.from(booking.getBookingDate())
@@ -62,6 +63,7 @@ public class OwnerDashboardTrendService {
                     .count();
 
             double earnings = bookings.stream()
+                    .filter(booking -> booking.getStatus() != Booking.BookingStatus.CANCELLED)
                     .filter(booking -> booking.getBookingDate() != null)
                     .filter(booking ->
                             YearMonth.from(booking.getBookingDate())

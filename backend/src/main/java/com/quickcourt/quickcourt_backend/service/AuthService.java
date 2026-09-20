@@ -54,6 +54,7 @@ public class AuthService {
                 .role(role)
                 .emailVerified(false)
                 .active(true)
+                .profileImage(request.getProfileImage())
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -65,6 +66,7 @@ public class AuthService {
                 .name(savedUser.getName())
                 .email(savedUser.getEmail())
                 .role(savedUser.getRole().name())
+                .profileImage(savedUser.getProfileImage())
                 .message("Registration successful. OTP generated successfully")
                 .build();
     }
@@ -98,6 +100,7 @@ public class AuthService {
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole().name())
+                .profileImage(user.getProfileImage())
                 .message("Login successful")
                 .build();
     }
@@ -108,9 +111,11 @@ public class AuthService {
         }
 
         try {
-            return User.Role.valueOf(
-                    role.trim().toUpperCase()
-            );
+            User.Role r = User.Role.valueOf(role.trim().toUpperCase());
+            if (r == User.Role.ADMIN) {
+                return User.Role.PLAYER; // Security: ADMIN role cannot be obtained via public registration
+            }
+            return r;
         } catch (IllegalArgumentException exception) {
             throw new RuntimeException("Invalid role");
         }

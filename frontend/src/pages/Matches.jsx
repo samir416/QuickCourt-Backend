@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { apiFetch } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
@@ -36,9 +36,14 @@ export default function Matches() {
     fetchMatches();
   }, [user]);
 
+  const [actionMsg, setActionMsg] = useState(null);
+  const [actionErr, setActionErr] = useState(null);
+
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
+      setActionErr(null);
+      setActionMsg(null);
       const payload = {
           ...formData,
           matchTime: new Date(formData.matchTime).toISOString(), maxPlayers: parseInt(formData.maxPlayers, 10)
@@ -48,19 +53,23 @@ export default function Matches() {
         body: JSON.stringify(payload)
       });
       setShowForm(false);
+      setActionMsg("Match created successfully!");
       fetchMatches();
     } catch (err) {
-      alert("Failed to create match: " + err.message);
+      setActionErr("Failed to create match: " + err.message);
     }
   };
 
   const handleAction = async (matchId, action) => {
     try {
+      setActionErr(null);
+      setActionMsg(null);
       setActionLoading(prev => ({ ...prev, [matchId]: true }));
       await apiFetch(`/matches/${matchId}/${action}?userId=${user.id}`, { method: 'POST' });
-      await fetchMatches(false); // don't show full page loading spinner
+      setActionMsg(`Successfully ${action === 'join' ? 'joined' : 'left'} the match.`);
+      await fetchMatches(false);
     } catch (err) {
-      alert("Failed to " + action + " match: " + err.message);
+      setActionErr("Failed to " + action + " match: " + err.message);
     } finally {
       setActionLoading(prev => ({ ...prev, [matchId]: false }));
     }
@@ -84,6 +93,9 @@ export default function Matches() {
               {showForm ? 'Cancel' : 'Create Match'}
           </button>
       </div>
+
+      {actionMsg && <p style={{ color: '#16a34a', background: '#f0fdf4', padding: '10px 14px', borderRadius: '8px', border: '1px solid #dcfce7', marginBottom: '20px' }}>{actionMsg}</p>}
+      {actionErr && <p style={{ color: '#dc2626', background: '#fef2f2', padding: '10px 14px', borderRadius: '8px', border: '1px solid #fee2e2', marginBottom: '20px' }}>{actionErr}</p>}
 
       {showForm && (
         <form onSubmit={handleCreate} className="account-form" style={{marginBottom: '40px', padding: '20px', background: '#f8f9fa', borderRadius: '8px'}}>

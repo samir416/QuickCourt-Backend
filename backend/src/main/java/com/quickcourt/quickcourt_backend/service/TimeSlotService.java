@@ -63,21 +63,53 @@ public class TimeSlotService {
         return mapToResponse(timeSlotRepository.save(slot));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<TimeSlotResponse> getSlots(
             Long courtId,
             LocalDate date) {
 
-        if (!courtRepository.existsById(courtId)) {
-            throw new RuntimeException("Court not found");
+        Court court = courtRepository.findById(courtId)
+                .orElseThrow(() -> new RuntimeException("Court not found"));
+
+        LocalTime opening = LocalTime.parse(court.getOpeningTime());
+        LocalTime closing = LocalTime.parse(court.getClosingTime());
+
+        List<TimeSlot> existing = timeSlotRepository.findByCourtIdAndSlotDateOrderByStartTimeAsc(courtId, date);
+
+        LocalTime current = opening;
+        while (current.isBefore(closing)) {
+            LocalTime next = current.plusHours(1);
+            LocalTime loopCurrent = current;
+            if (existing.stream().noneMatch(s -> s.getStartTime().equals(loopCurrent))) {
+                TimeSlot slot = new TimeSlot();
+                slot.setCourt(court);
+                slot.setSlotDate(date);
+                slot.setStartTime(current);
+                slot.setEndTime(next);
+                slot.setStatus(TimeSlot.SlotStatus.AVAILABLE);
+                timeSlotRepository.save(slot);
+            }
+            current = next;
         }
 
-        return timeSlotRepository
-                .findByCourtIdAndSlotDateOrderByStartTimeAsc(courtId, date)
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
+        List<TimeSlot> allSlots = timeSlotRepository.findByCourtIdAndSlotDateOrderByStartTimeAsc(courtId, date);
+        List<com.quickcourt.quickcourt_backend.entity.Booking> bookings = bookingRepository
+                .findByCourtIdAndBookingDate(courtId, date).stream()
+                .filter(b -> b.getStatus() != com.quickcourt.quickcourt_backend.entity.Booking.BookingStatus.CANCELLED).toList();
+
+        return allSlots.stream().map(slot -> {
+            TimeSlotResponse res = mapToResponse(slot);
+            for (com.quickcourt.quickcourt_backend.entity.Booking booking : bookings) {
+                if (slot.getStartTime().isBefore(booking.getEndTime()) && slot.getEndTime().isAfter(booking.getStartTime())) {
+                    res.setStatus("BOOKED");
+                    break;
+                }
+            }
+            return res;
+        }).collect(java.util.stream.Collectors.toList());
     }
+
+
 
     
     @Transactional(readOnly = true)

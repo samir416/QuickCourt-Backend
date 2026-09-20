@@ -55,6 +55,7 @@ public class OwnerDashboardCalendarService {
             LocalDate date = currentDate;
 
             List<BookingResponse> bookings = allBookings.stream()
+                    .filter(booking -> booking.getStatus() == Booking.BookingStatus.CONFIRMED)
                     .filter(booking ->
                             booking.getBookingDate() != null
                                     && booking.getBookingDate().equals(date))

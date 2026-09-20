@@ -19,6 +19,7 @@ public class CourtController {
 
     private final CourtService courtService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("#ownerId == authentication.principal.id or hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<CourtResponse> createCourt(
             @Valid @RequestBody CourtRequest request,
@@ -47,6 +48,7 @@ public class CourtController {
         );
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("#ownerId == authentication.principal.id or hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<CourtResponse> updateCourt(
             @PathVariable Long id,
@@ -58,6 +60,7 @@ public class CourtController {
         );
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("#ownerId == authentication.principal.id or hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCourt(
             @PathVariable Long id,

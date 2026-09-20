@@ -30,28 +30,31 @@ public class OwnerModuleController {
     private final CourtRepository courtRepository;
     private final BookingRepository bookingRepository;
 
+    @org.springframework.security.access.prepost.PreAuthorize("#ownerId == authentication.principal.id or hasRole('ADMIN')")
     @GetMapping("/{ownerId}/venues")
     public ResponseEntity<List<VenueResponse>> getOwnerVenues(@PathVariable Long ownerId) {
         User owner = userRepository.findById(ownerId).orElseThrow(() -> new RuntimeException("Owner not found"));
-        List<Venue> venues = venueRepository.findByOwner(owner);
+        List<Venue> venues = venueRepository.findByOwner(owner).stream().filter(v -> Boolean.TRUE.equals(v.getActive())).collect(Collectors.toList());
         return ResponseEntity.ok(venues.stream().map(this::mapVenue).collect(Collectors.toList()));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("#ownerId == authentication.principal.id or hasRole('ADMIN')")
     @GetMapping("/{ownerId}/courts")
     public ResponseEntity<List<CourtResponse>> getOwnerCourts(@PathVariable Long ownerId) {
         User owner = userRepository.findById(ownerId).orElseThrow(() -> new RuntimeException("Owner not found"));
-        List<Venue> venues = venueRepository.findByOwner(owner);
+        List<Venue> venues = venueRepository.findByOwner(owner).stream().filter(v -> Boolean.TRUE.equals(v.getActive())).collect(Collectors.toList());
         List<CourtResponse> courts = new ArrayList<>();
         for (Venue v : venues) {
-            courts.addAll(courtRepository.findByVenueId(v.getId()).stream().map(c -> mapCourt(c, v)).collect(Collectors.toList()));
+            courts.addAll(courtRepository.findByVenueIdAndActiveTrue(v.getId()).stream().map(c -> mapCourt(c, v)).collect(Collectors.toList()));
         }
         return ResponseEntity.ok(courts);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("#ownerId == authentication.principal.id or hasRole('ADMIN')")
     @GetMapping("/{ownerId}/bookings")
     public ResponseEntity<List<BookingResponse>> getOwnerBookings(@PathVariable Long ownerId) {
         User owner = userRepository.findById(ownerId).orElseThrow(() -> new RuntimeException("Owner not found"));
-        List<Venue> venues = venueRepository.findByOwner(owner);
+        List<Venue> venues = venueRepository.findByOwner(owner).stream().filter(v -> Boolean.TRUE.equals(v.getActive())).collect(Collectors.toList());
         List<BookingResponse> bookings = new ArrayList<>();
         for (Venue v : venues) {
             bookings.addAll(bookingRepository.findByCourtVenueIdOrderByBookingDateDescStartTimeDesc(v.getId())

@@ -43,12 +43,18 @@ export default function AdminUsers() {
     fetchUsers();
   }, [user, search, role, status]);
 
+  const [actionMsg, setActionMsg] = useState(null);
+  const [actionErr, setActionErr] = useState(null);
+
   const handleAction = async (userId, action) => {
     try {
+      setActionErr(null);
+      setActionMsg(null);
       await apiFetch(`/admin/users/${userId}/${action}?adminId=${user.id}`, { method: 'PUT' });
+      setActionMsg(`User ${action}ed successfully.`);
       fetchUsers();
     } catch (err) {
-      alert(`Failed to ${action} user: ` + err.message);
+      setActionErr(`Failed to ${action} user: ` + err.message);
     }
   };
 
@@ -56,10 +62,11 @@ export default function AdminUsers() {
     setHistoryUser(u);
     try {
       setHistoryLoading(true);
+      setActionErr(null);
       const data = await apiFetch(`/bookings/user/${u.id}`);
       setHistoryBookings(Array.isArray(data) ? data : []);
     } catch (err) {
-      alert("Failed to load history: " + err.message);
+      setActionErr("Failed to load booking history: " + err.message);
     } finally {
       setHistoryLoading(false);
     }
@@ -71,6 +78,9 @@ export default function AdminUsers() {
       <section className="account-content">
         <p className="eyebrow">Management</p>
         <h2>User Management</h2>
+        
+        {actionMsg && <p style={{ color: '#16a34a', background: '#f0fdf4', padding: '10px 14px', borderRadius: '8px', border: '1px solid #dcfce7', marginBottom: '15px' }}>{actionMsg}</p>}
+        {actionErr && <p style={{ color: '#dc2626', background: '#fef2f2', padding: '10px 14px', borderRadius: '8px', border: '1px solid #fee2e2', marginBottom: '15px' }}>{actionErr}</p>}
         
         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
           <input 
@@ -114,13 +124,15 @@ export default function AdminUsers() {
                   <td style={{ padding: '15px 10px' }}>{u.email}</td>
                   <td style={{ padding: '15px 10px' }}>{u.role}</td>
                   <td style={{ padding: '15px 10px' }}>{u.active !== false ? 'Active' : 'Banned'}</td>
-                  <td style={{ padding: '15px 10px', display: 'flex', gap: '8px' }}>
-                    {u.active !== false ? (
-                        <button className="outline-button" onClick={() => handleAction(u.id, 'ban')}>Ban</button>
-                    ) : (
-                        <button className="outline-button" onClick={() => handleAction(u.id, 'unban')}>Unban</button>
-                    )}
-                    <button className="outline-button" onClick={() => loadHistory(u)}>History</button>
+                  <td style={{ padding: '15px 10px' }}>
+                    <div style={{ display: 'inline-flex', gap: '8px' }}>
+                      {u.active !== false ? (
+                          <button className="button-danger" style={{ fontSize: "12px", padding: "6px 12px" }} onClick={() => handleAction(u.id, 'ban')}>Ban</button>
+                      ) : (
+                          <button className="button button-dark" style={{ fontSize: "12px", padding: "6px 12px" }} onClick={() => handleAction(u.id, 'unban')}>Unban</button>
+                      )}
+                      <button className="outline-button" style={{ fontSize: "12px", padding: "6px 12px" }} onClick={() => loadHistory(u)}>History</button>
+                    </div>
                   </td>
                 </tr>
               ))}

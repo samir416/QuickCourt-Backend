@@ -1,6 +1,8 @@
 import AdminSidebar from "../components/AdminSidebar";
+import BarChart from "../components/BarChart";
 import { useState, useEffect } from "react";
 import { apiFetch } from "../services/api";
+import { Users, Shield, CalendarCheck, MapPin, AlertCircle } from "lucide-react";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ totalUsers: 0, facilityOwners: 0, totalBookings: 0, activeCourts: 0 });
@@ -16,14 +18,14 @@ export default function AdminDashboard() {
         setLoading(true);
         const [statsData, trendsData, appTrend, spTrend] = await Promise.all([
           apiFetch("/admin/dashboard/stats"),
-          apiFetch("/admin/dashboard/trends").catch(()=>[]),
-          apiFetch("/admin/dashboard/approval-trend").catch(()=>[]),
-          apiFetch("/admin/dashboard/most-active-sports").catch(()=>[])
+          apiFetch("/admin/dashboard/trends").catch(() => []),
+          apiFetch("/admin/dashboard/approval-trend").catch(() => []),
+          apiFetch("/admin/dashboard/most-active-sports").catch(() => [])
         ]);
         if (statsData) setStats(statsData);
-        if (trendsData) setTrends(trendsData);
-        if (appTrend) setApprovalTrend(appTrend);
-        if (spTrend) setSportsTrend(spTrend);
+        if (trendsData) setTrends(Array.isArray(trendsData) ? trendsData : []);
+        if (appTrend) setApprovalTrend(Array.isArray(appTrend) ? appTrend : []);
+        if (spTrend) setSportsTrend(Array.isArray(spTrend) ? spTrend : []);
         setError(null);
       } catch (err) {
         setError(err.message);
@@ -34,74 +36,86 @@ export default function AdminDashboard() {
     fetchData();
   }, []);
 
-  const renderBarChart = (data, labelKey, valueKey, color, height = 150) => {
-    if (!data || data.length === 0) return <p>No data available</p>;
-    const maxVal = Math.max(...data.map(d => Number(d[valueKey]) || 0), 1);
-    return (
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: `${height}px`, marginTop: '20px', paddingBottom: '20px', borderBottom: '1px solid #eee' }}>
-        {data.map((item, i) => (
-          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '10px', color: '#666' }}>{item[valueKey]}</span>
-            <div style={{ width: '100%', backgroundColor: color, height: `${(Number(item[valueKey]) || 0) / maxVal * (height-30)}px`, borderRadius: '4px 4px 0 0', minHeight: '2px' }}></div>
-            <span style={{ fontSize: '10px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', color: '#333' }}>{item[labelKey]}</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
   return (
     <main className="account-page">
       <AdminSidebar active="dashboard" />
       <section className="account-content">
-        <p className="eyebrow">Overview</p>
-        <h2>Admin Dashboard</h2>
+        <div className="account-header">
+          <div>
+            <p className="eyebrow">Overview</p>
+            <h1>Admin Dashboard</h1>
+            <p>System-wide metrics, facility approvals, registration trends, and activity telemetry.</p>
+          </div>
+        </div>
         
-        {loading && <p>Loading dashboard...</p>}
-        {error && <p style={{color: 'red'}}>Failed to load data: {error}</p>}
+        {loading && <p>Loading system analytics...</p>}
+        {error && (
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 16px", borderRadius: "8px", background: "#fef2f2", border: "1px solid #fee2e2", color: "#b91c1c", marginBottom: "20px" }}>
+            <AlertCircle size={18} />
+            <span>Failed to load data: {error}</span>
+          </div>
+        )}
         
         {!loading && !error && (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-              <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #eaeaea', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                <h3 style={{ margin: '0 0 10px', fontSize: '14px', color: '#666' }}>Total Users</h3>
-                <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold' }}>{stats.totalUsers || 0}</p>
+            {/* Global Stats KPIs */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+              <div style={{ padding: '24px', background: '#fff', borderRadius: '12px', border: '1px solid var(--line, #e5e7eb)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <p className="eyebrow" style={{ margin: 0 }}>Total Users</p>
+                  <Users size={18} color="var(--muted)" />
+                </div>
+                <h2 style={{ margin: '8px 0 0', fontSize: '32px', fontWeight: 'bold', color: "var(--ink, #1d2821)" }}>{stats.totalUsers || 0}</h2>
               </div>
-              <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #eaeaea', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                <h3 style={{ margin: '0 0 10px', fontSize: '14px', color: '#666' }}>Facility Owners</h3>
-                <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold' }}>{stats.facilityOwners || 0}</p>
+              <div style={{ padding: '24px', background: '#fff', borderRadius: '12px', border: '1px solid var(--line, #e5e7eb)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <p className="eyebrow" style={{ margin: 0 }}>Facility Owners</p>
+                  <Shield size={18} color="var(--muted)" />
+                </div>
+                <h2 style={{ margin: '8px 0 0', fontSize: '32px', fontWeight: 'bold', color: "var(--ink, #1d2821)" }}>{stats.totalFacilityOwners ?? stats.facilityOwners ?? 0}</h2>
               </div>
-              <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #eaeaea', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                <h3 style={{ margin: '0 0 10px', fontSize: '14px', color: '#666' }}>Total Bookings</h3>
-                <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold' }}>{stats.totalBookings || 0}</p>
+              <div style={{ padding: '24px', background: '#fff', borderRadius: '12px', border: '1px solid var(--line, #e5e7eb)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <p className="eyebrow" style={{ margin: 0 }}>Total Bookings</p>
+                  <CalendarCheck size={18} color="var(--muted)" />
+                </div>
+                <h2 style={{ margin: '8px 0 0', fontSize: '32px', fontWeight: 'bold', color: "var(--ink, #1d2821)" }}>{stats.totalBookings || 0}</h2>
               </div>
-              <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #eaeaea', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                <h3 style={{ margin: '0 0 10px', fontSize: '14px', color: '#666' }}>Active Courts</h3>
-                <p style={{ margin: '0', fontSize: '32px', fontWeight: 'bold' }}>{stats.activeCourts || 0}</p>
+              <div style={{ padding: '24px', background: '#fff', borderRadius: '12px', border: '1px solid var(--line, #e5e7eb)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <p className="eyebrow" style={{ margin: 0 }}>Active Courts</p>
+                  <MapPin size={18} color="var(--muted)" />
+                </div>
+                <h2 style={{ margin: '8px 0 0', fontSize: '32px', fontWeight: 'bold', color: "var(--ink, #1d2821)" }}>{stats.activeCourts || 0}</h2>
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '40px' }}>
-              <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #eaeaea' }}>
-                <h3 style={{ margin: '0', fontSize: '16px' }}>Booking Activity Over Time</h3>
-                {renderBarChart(trends, 'period', 'bookings', '#2ecc71')}
+            {/* Charts Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginBottom: '28px' }}>
+              <div style={{ padding: '24px', background: '#fff', borderRadius: '12px', border: '1px solid var(--line, #e5e7eb)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <p className="eyebrow" style={{ margin: 0 }}>Activity</p>
+                <h3 style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: 700 }}>Booking Activity Over Time</h3>
+                <BarChart data={trends} labelKey="period" valueKey="bookings" color="#16a34a" height={190} />
               </div>
               
-              <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #eaeaea' }}>
-                <h3 style={{ margin: '0', fontSize: '16px' }}>User Registration Trends</h3>
-                {renderBarChart(trends, 'period', 'users', '#3498db')}
+              <div style={{ padding: '24px', background: '#fff', borderRadius: '12px', border: '1px solid var(--line, #e5e7eb)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <p className="eyebrow" style={{ margin: 0 }}>Growth</p>
+                <h3 style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: 700 }}>User Registration Trends</h3>
+                <BarChart data={trends} labelKey="period" valueKey="users" color="#2563eb" height={190} />
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-              <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #eaeaea' }}>
-                <h3 style={{ margin: '0', fontSize: '16px' }}>Facility Approval Trend</h3>
-                {renderBarChart(approvalTrend, 'period', 'approved', '#f1c40f')}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+              <div style={{ padding: '24px', background: '#fff', borderRadius: '12px', border: '1px solid var(--line, #e5e7eb)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <p className="eyebrow" style={{ margin: 0 }}>Approvals</p>
+                <h3 style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: 700 }}>Facility Approval Trend</h3>
+                <BarChart data={approvalTrend} labelKey="period" valueKey="approved" color="#d97706" height={190} />
               </div>
               
-              <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #eaeaea' }}>
-                <h3 style={{ margin: '0', fontSize: '16px' }}>Most Active Sports</h3>
-                {renderBarChart(sportsTrend, 'sport', 'bookingCount', '#9b59b6')}
+              <div style={{ padding: '24px', background: '#fff', borderRadius: '12px', border: '1px solid var(--line, #e5e7eb)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <p className="eyebrow" style={{ margin: 0 }}>Preferences</p>
+                <h3 style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: 700 }}>Most Active Sports</h3>
+                <BarChart data={sportsTrend} labelKey="sport" valueKey="bookingCount" color="#7c3aed" height={190} />
               </div>
             </div>
           </>

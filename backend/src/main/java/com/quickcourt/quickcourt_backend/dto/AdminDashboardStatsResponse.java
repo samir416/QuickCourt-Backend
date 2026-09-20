@@ -15,6 +15,9 @@ public class AdminDashboardStatsResponse {
 
     private long totalUsers;
     private long totalFacilityOwners;
+    private long facilityOwners;
+    private long totalPlayers;
+    private long totalAdmins;
     private long totalBookings;
     private long activeCourts;
     private long totalVenues;

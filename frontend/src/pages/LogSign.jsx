@@ -1,6 +1,6 @@
-﻿import { useState, useRef } from "react";
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { apiFetch } from "../services/api";
+import { apiFetch, API_BASE_URL } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 export default function LogSign() {
@@ -14,10 +14,23 @@ export default function LogSign() {
   const [resetMessage, setResetMessage] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
+  const [signupImageFile, setSignupImageFile] = useState(null);
+  const [signupImagePreview, setSignupImagePreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  const handleSignupImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSignupImageFile(file);
+      setSignupImagePreview(URL.createObjectURL(file));
+    } else {
+      setSignupImageFile(null);
+      setSignupImagePreview(null);
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -35,7 +48,6 @@ export default function LogSign() {
     setUserEmail(email);
     if (fullName) setUserName(fullName);
 
-    
     setIsSubmitting(true);
 
     if (mode === "login") {
@@ -65,10 +77,30 @@ export default function LogSign() {
     }
 
     try {
+      let uploadedProfileImage = null;
+      if (signupImageFile) {
+        const uploadData = new FormData();
+        uploadData.append("file", signupImageFile);
+        const res = await fetch(`${API_BASE_URL}/profile/upload`, {
+          method: "POST",
+          body: uploadData,
+        });
+        if (res.ok) {
+          const json = await res.json();
+          uploadedProfileImage = json.imageUrl;
+        }
+      }
+
       const dbRole = roleType === "Facility Owner" ? "FACILITY_OWNER" : "PLAYER";
       await apiFetch("/auth/register", {
         method: "POST",
-        body: JSON.stringify({ name: fullName, email, password, role: dbRole }),
+        body: JSON.stringify({
+          name: fullName,
+          email,
+          password,
+          role: dbRole,
+          profileImage: uploadedProfileImage
+        }),
       });
       setStage("verify");
     } catch (err) {
@@ -82,14 +114,13 @@ export default function LogSign() {
     }
   };
 
-  
-
   const switchMode = (nextMode) => {
     setMode(nextMode);
     setStage("form");
     setPasswordError("");
     setEmailError("");
-    
+    setSignupImageFile(null);
+    setSignupImagePreview(null);
     setResetMessage("");
     setFormError("");
   };
@@ -184,6 +215,24 @@ export default function LogSign() {
                   <label className="field-label">
                     Full name
                     <input name="fullName" required placeholder="Your name" />
+                  </label>
+                  <label className="field-label">
+                    Profile Photo (Optional)
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "6px" }}>
+                      {signupImagePreview && (
+                        <img
+                          src={signupImagePreview}
+                          alt="Preview"
+                          style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover", border: "1px solid #ccc" }}
+                        />
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleSignupImageChange}
+                        style={{ fontSize: "13px" }}
+                      />
+                    </div>
                   </label>
                 </>
               )}
@@ -343,6 +392,8 @@ function ResetPasswordPanel({ onBack, userEmail, onSuccess }) {
     const [loading, setLoading] = useState(false);
     const passwordPattern = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,20}$/;
 
+    const [successMessage, setSuccessMessage] = useState("");
+
     const handleReset = async (e) => {
         e.preventDefault();
         const otpCode = code.join("");
@@ -354,8 +405,10 @@ function ResetPasswordPanel({ onBack, userEmail, onSuccess }) {
                 method: "POST",
                 body: JSON.stringify({ email: userEmail, otp: otpCode, newPassword: password })
             });
-            alert("Password reset successfully! Please log in.");
-            onSuccess();
+            setSuccessMessage("Password reset successfully! Returning to login...");
+            setTimeout(() => {
+                onSuccess();
+            }, 1500);
         } catch(err) {
             setError(err.message || "Failed to reset password.");
         } finally {
@@ -371,6 +424,7 @@ function ResetPasswordPanel({ onBack, userEmail, onSuccess }) {
                 <OTPInput code={code} setCode={setCode} />
                 <PasswordField label="New Password" placeholder="8-20 characters" name="newPassword" visible={showPassword} onToggle={() => setShowPassword(!showPassword)} value={password} onChange={(e) => setPassword(e.target.value)} />
                 {error && <small style={{color:'red', display:'block', marginTop:'10px'}}>{error}</small>}
+                {successMessage && <small style={{color:'#16a34a', display:'block', marginTop:'10px', fontWeight: 600}}>{successMessage}</small>}
                 <button type="submit" className="button button-dark button-full" disabled={loading} style={{marginTop:'15px'}}>{loading ? 'Resetting...' : 'Reset Password'}</button>
             </form>
             <button className="back-button" onClick={onBack} style={{marginTop:'20px'}}>Back to login</button>

@@ -42,6 +42,9 @@ public class MatchService {
     public MatchResponse joinMatch(Long userId, Long matchId) {
         User user = userRepository.findById(userId).orElseThrow();
         Match match = matchRepository.findById(matchId).orElseThrow();
+        if (match.getParticipants().stream().anyMatch(p -> p.getId().equals(userId))) {
+            throw new RuntimeException("Already joined this match");
+        }
         if (match.getParticipants().size() >= match.getMaxPlayers()) {
             throw new RuntimeException("Match is full");
         }
@@ -57,7 +60,7 @@ public class MatchService {
     }
 
     private MatchResponse mapToResponse(Match match, Long userId) {
-        boolean isPart = match.getParticipants().stream().anyMatch(p -> p.getId().equals(userId));
+        boolean isPart = userId != null && match.getParticipants().stream().anyMatch(p -> p.getId().equals(userId));
         return MatchResponse.builder()
             .id(match.getId())
             .title(match.getTitle())

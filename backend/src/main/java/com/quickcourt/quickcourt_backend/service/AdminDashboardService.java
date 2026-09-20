@@ -69,6 +69,7 @@ public class AdminDashboardService {
 
         double totalEarnings = bookingRepository.findAll()
                 .stream()
+                .filter(booking -> booking.getStatus() != Booking.BookingStatus.CANCELLED)
                 .filter(booking ->
                         booking.getPaymentStatus() == Booking.PaymentStatus.SUCCESS)
                 .mapToDouble(Booking::getTotalPrice)

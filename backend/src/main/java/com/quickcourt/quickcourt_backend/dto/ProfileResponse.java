@@ -15,4 +15,5 @@ public class ProfileResponse {
     private String role;
     private Boolean emailVerified;
     private Boolean active;
+    private String profileImage;
 }

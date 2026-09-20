@@ -22,4 +22,8 @@ public class TimeSlotResponse {
     private LocalTime endTime;
     private String status;
     private String blockReason;
+
+    public boolean isAvailable() {
+        return "AVAILABLE".equals(this.status);
+    }
 }

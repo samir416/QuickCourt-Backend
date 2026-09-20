@@ -13,6 +13,8 @@ import lombok.Setter;
 @Builder
 public class VenueResponse {
 
+    private java.util.List<String> photos;
+
     private Long id;
     private Long ownerId;
     private String ownerName;

@@ -52,12 +52,14 @@ public class AdminDashboardTrendService {
                     .count();
 
             long bookingCount = bookings.stream()
+                    .filter(booking -> booking.getStatus() != Booking.BookingStatus.CANCELLED)
                     .filter(booking -> booking.getBookingDate() != null)
                     .filter(booking -> YearMonth.from(booking.getBookingDate())
                             .equals(month))
                     .count();
 
             double earnings = bookings.stream()
+                    .filter(booking -> booking.getStatus() != Booking.BookingStatus.CANCELLED)
                     .filter(booking -> booking.getBookingDate() != null)
                     .filter(booking -> YearMonth.from(booking.getBookingDate())
                             .equals(month))

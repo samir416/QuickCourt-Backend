@@ -41,7 +41,22 @@ public class ProfileService {
 
         user.setName(request.getName().trim());
         user.setEmail(email);
+        if (request.getProfileImage() != null) {
+            user.setProfileImage(request.getProfileImage());
+        }
 
+        return mapToResponse(userRepository.save(user));
+    }
+
+    public ProfileResponse updateProfileImage(Long userId, String imageUrl) {
+        User user = getUser(userId);
+        user.setProfileImage(imageUrl);
+        return mapToResponse(userRepository.save(user));
+    }
+
+    public ProfileResponse deleteProfileImage(Long userId) {
+        User user = getUser(userId);
+        user.setProfileImage(null);
         return mapToResponse(userRepository.save(user));
     }
 
@@ -58,6 +73,7 @@ public class ProfileService {
                 .role(user.getRole().name())
                 .emailVerified(user.getEmailVerified())
                 .active(user.getActive())
+                .profileImage(user.getProfileImage())
                 .build();
     }
 }

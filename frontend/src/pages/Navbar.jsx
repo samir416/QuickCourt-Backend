@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X } from 'lucide-react';
 import { useAuth } from "../context/AuthContext";
+import Avatar from "../components/Avatar";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -38,11 +40,10 @@ export default function Navbar() {
         <span>quickcourt</span>
       </Link>
       <nav
-        ref={navRef}
-        className={menuOpen ? "site-nav mobile-open" : "site-nav"}
-        aria-label="Primary navigation"
-        style={{ position: 'relative' }}
-      >
+  ref={navRef}
+  className={menuOpen ? "site-nav mobile-open" : "site-nav"}
+  aria-label="Primary navigation"
+>
         <div 
           className="nav-indicator" 
           style={{
@@ -100,7 +101,7 @@ export default function Navbar() {
         {user ? (
           <>
             <NavLink className="profile-link" to={user.role === 'OWNER' || user.role === 'FACILITY_OWNER' ? "/owner/profile" : user.role === 'ADMIN' ? "/admin/profile" : "/profile"}>
-              <span className="avatar">{user.name ? user.name.substring(0,2).toUpperCase() : 'U'}</span>
+              <Avatar name={user.name} image={user.profileImage} size={32} />
               <span className="profile-name">{user.name}</span>
             </NavLink>
             <button className="header-login" onClick={handleLogout} style={{background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600}}>
@@ -119,7 +120,7 @@ export default function Navbar() {
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((current) => !current)}
       >
-          {menuOpen ? "X" : "Menu"}
+          {menuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
     </header>
