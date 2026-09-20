@@ -48,7 +48,6 @@ export default function Navbar() {
           className="nav-indicator" 
           style={{
             position: 'absolute',
-            top: 0,
             bottom: 0,
             left: `${indicatorStyle.left}px`,
             width: `${indicatorStyle.width}px`,

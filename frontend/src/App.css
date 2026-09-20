@@ -84,6 +84,7 @@ button,
 select,
 textarea {
   font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: bold;
 }
 
 .eyebrow {
@@ -150,6 +151,8 @@ textarea {
   transition:
     color 0.3s ease,
     background-color 0.3s ease;
+    font-weight: 900;
+    font-size: 16px;
 }
 
 .site-nav a.active {
