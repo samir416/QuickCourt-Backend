@@ -10,6 +10,19 @@ QuickCourt was developed as a pre-project for a hackathon based on the provided 
 
 ---
 
+## Live Deployment
+
+### Frontend
+[QuickCourt Live Demo](https://quickcourt-tau.vercel.app/)
+
+### Backend
+[QuickCourt Backend API](https://quickcourt-backend.onrender.com)
+
+### Database
+TiDB Cloud Starter
+
+
+
 ## Problem Statement
 
 QuickCourt is designed to provide an end-to-end digital experience for local sports facility booking.
