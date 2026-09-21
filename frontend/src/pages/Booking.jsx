@@ -30,7 +30,7 @@ export default function Booking() {
     const fetchVenues = async () => {
       try {
         setLoading(true);
-        const data = await apiFetch("/venues?size=1000");
+        const data = await apiFetch("/venues?size=50");
         setApiVenues(Array.isArray(data) ? data : (data.content || []));
         setError(null);
       } catch (err) {
